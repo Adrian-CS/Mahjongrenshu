@@ -1,5 +1,5 @@
 // Offline support for the installed PWA. Bump VERSION to drop old caches.
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = `nanikiru-${VERSION}`;
 const PRECACHE = [
   "/",
@@ -59,15 +59,21 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-  if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (request.method !== "GET" || url.origin !== self.location.origin) return;
+  // API responses are live data: never serve them from cache.
+  if (url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     // Network first so deploys show up; fall back to the cached shell offline.
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put("/", copy));
+          // Skip redirects (e.g. Cloudflare Access login) so the cached shell stays the app.
+          if (response.ok && response.type === "basic" && !response.redirected) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put("/", copy));
+          }
           return response;
         })
         .catch(() => caches.match("/")),

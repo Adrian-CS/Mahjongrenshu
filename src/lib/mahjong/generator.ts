@@ -17,6 +17,8 @@ export interface GeneratorOptions {
   minShanten?: number;
   rng?: Rng;
   maxAttempts?: number;
+  /** Extra filter, e.g. to only accept problems of a given category. */
+  accept?: (problem: Problem) => boolean;
 }
 
 /** Deterministic PRNG (mulberry32), useful for tests and reproducible problems. */
@@ -57,12 +59,14 @@ export function drawTiles(n: number, rng: Rng = Math.random): Tile[] {
  * range is 0..3.
  */
 export function generateProblem(options: GeneratorOptions = {}): Problem {
-  const { maxShanten = 3, minShanten = 0, rng = Math.random, maxAttempts = 10_000 } = options;
+  const { maxShanten = 3, minShanten = 0, rng = Math.random, maxAttempts = 10_000, accept } = options;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const tiles = drawTiles(14, rng);
     const shanten = calculateShanten(toCounts(tiles));
     if (shanten < minShanten || shanten > maxShanten) continue;
-    return { hand: sortTiles(tiles.slice(0, 13)), draw: tiles[13] };
+    const problem = { hand: sortTiles(tiles.slice(0, 13)), draw: tiles[13] };
+    if (accept && !accept(problem)) continue;
+    return problem;
   }
-  throw new Error(`Could not generate a hand with shanten in [${minShanten}, ${maxShanten}]`);
+  throw new Error(`Could not generate a matching hand with shanten in [${minShanten}, ${maxShanten}]`);
 }

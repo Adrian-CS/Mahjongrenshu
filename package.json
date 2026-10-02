@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc -p functions/tsconfig.json",
+    "db:migrate:local": "wrangler d1 migrations apply nanikiru --local",
+    "db:migrate:remote": "wrangler d1 migrations apply nanikiru --remote",
+    "preview": "npm run build && wrangler pages dev"
   },
   "dependencies": {
     "next": "16.3.8",
@@ -15,6 +19,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261002.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.5",
     "@types/react": "^19",
@@ -24,6 +29,7 @@
     "syanten": "^1.6.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "wrangler": "^4.146.0"
   }
 }

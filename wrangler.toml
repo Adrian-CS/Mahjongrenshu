@@ -1,4 +1,12 @@
-# Cloudflare Pages: static export produced by `npm run build` (next.config.ts sets output: "export").
+# Cloudflare Pages: static export produced by `npm run build` (next.config.ts sets output: "export"),
+# plus Pages Functions in functions/ backed by D1.
 name = "mahjong-nanikiru-trainer"
 pages_build_output_dir = "out"
 compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nanikiru"
+# Replace with the id printed by `npx wrangler d1 create nanikiru`.
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"

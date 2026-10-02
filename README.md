@@ -13,7 +13,12 @@ npm run dev     # http://localhost:3000
 npm test        # tests del motor (vitest)
 npm run lint
 npm run build   # export estático en out/
+npm run typecheck
+npm run db:migrate:local && npm run preview   # app + API + D1 local en http://localhost:8788
 ```
+
+`npm run dev` no tiene API: los intentos se quedan en la cola local hasta que
+haya servidor.
 
 ## Estructura
 
@@ -26,6 +31,9 @@ npm run build   # export estático en out/
 | HandRow          | `src/components/HandRow.tsx` |
 | ResultPanel      | `src/components/ResultPanel.tsx` |
 | GameController   | `src/hooks/useGameController.ts` |
+| Categorías / repaso | `src/lib/mahjong/shapes.ts`, `src/lib/mahjong/review.ts` |
+| API              | `functions/api/attempts.ts` (POST), `functions/api/stats.ts` (GET) |
+| Esquema D1       | `migrations/0001_attempts.sql` |
 
 ## Decisiones
 
@@ -58,6 +66,27 @@ Build command `npm run build`, output directory `out` (o
 `npx wrangler pages deploy` con `wrangler.toml`). `public/_headers` evita que
 `sw.js` y el manifest queden cacheados entre deploys.
 
-## Pendiente (Fase 2)
+## Fase 2: progreso y repaso (D1 + Cloudflare Access)
 
-Supabase (auth mínima + tabla `problems_solved`) y repaso por categoría de error.
+- **Datos:** cada respuesta se guarda en la tabla `attempts` de D1 a través de
+  Pages Functions. El cliente las encola en `localStorage` y las envía por
+  lotes, así que también se guardan las jugadas hechas sin conexión.
+- **Categoría de problema:** la forma de la que sale el descarte óptimo (honor
+  aislado, terminal aislado, kanchan, penchan…), según `classifyTile`. Si varios
+  descartes empatan, gana la forma más básica.
+- **Modo repaso:** elige una categoría con fallos, con más peso cuanto mayor es
+  el % de error en los últimos 300 intentos, y genera una mano nueva de esa
+  categoría. Si una categoría rara no sale en 1500 intentos, cae a un problema
+  normal.
+- **Login:** ninguno en la app. Toda la web va detrás de Cloudflare Access y la
+  API usa el email que Access reenvía (`Cf-Access-Authenticated-User-Email`).
+  **Sin Access la API queda abierta** y todo se guarda como usuario `local`.
+
+### Puesta en marcha en Cloudflare
+
+1. `npx wrangler d1 create nanikiru` y copia el `database_id` en `wrangler.toml`.
+2. `npm run db:migrate:remote`.
+3. Pages → proyecto conectado al repo: build `npm run build`, salida `out`. El
+   binding `DB` se lee de `wrangler.toml`.
+4. Zero Trust → Access → Applications → *Self-hosted*: dominio de la app (y
+   `*.<proyecto>.pages.dev` para las previews), política *Allow* con tu email.

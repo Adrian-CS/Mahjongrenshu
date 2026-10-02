@@ -1,10 +1,13 @@
-import { DiscardOption, HandEvaluation, Tile } from "@/lib/mahjong";
+import { DiscardOption, HandEvaluation, Shape, Tile } from "@/lib/mahjong";
+import { SHAPE_LABELS } from "./shapeLabels";
 import { TileDisplay } from "./TileDisplay";
 
 interface ResultPanelProps {
   evaluation: HandEvaluation;
   chosen: DiscardOption;
   correct: boolean;
+  category: Shape | null;
+  generating: boolean;
   onNext: () => void;
 }
 
@@ -24,7 +27,7 @@ function TileList({ tiles }: { tiles: Tile[] }) {
   );
 }
 
-export function ResultPanel({ evaluation, chosen, correct, onNext }: ResultPanelProps) {
+export function ResultPanel({ evaluation, chosen, correct, category, generating, onNext }: ResultPanelProps) {
   const best = evaluation.options[0];
   return (
     <section className="w-full space-y-4">
@@ -45,14 +48,16 @@ export function ResultPanel({ evaluation, chosen, correct, onNext }: ResultPanel
               <strong>{best.ukeire.total}</strong>
             </p>
           )}
+          {category && <p className="mt-1 text-sm opacity-80">Tipo de problema: {SHAPE_LABELS[category]}</p>}
         </div>
         <button
           type="button"
           onClick={onNext}
+          disabled={generating}
           autoFocus
           className="rounded-lg bg-zinc-900 px-5 py-2 font-semibold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
         >
-          Siguiente problema →
+          {generating ? "Generando…" : "Siguiente problema →"}
         </button>
       </div>
 
