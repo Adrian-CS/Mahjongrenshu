@@ -5,6 +5,7 @@ interface ResultPanelProps {
   evaluation: HandEvaluation;
   chosen: DiscardOption;
   correct: boolean;
+  onNext: () => void;
 }
 
 export function shantenLabel(shanten: number): string {
@@ -23,26 +24,36 @@ function TileList({ tiles }: { tiles: Tile[] }) {
   );
 }
 
-export function ResultPanel({ evaluation, chosen, correct }: ResultPanelProps) {
+export function ResultPanel({ evaluation, chosen, correct, onNext }: ResultPanelProps) {
   const best = evaluation.options[0];
   return (
     <section className="w-full space-y-4">
       <div
-        className={`rounded-lg p-4 ${
+        className={`flex flex-wrap items-center justify-between gap-3 rounded-lg p-4 short:py-2 ${
           correct ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100" : "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-100"
         }`}
       >
-        <p className="text-lg font-semibold">{correct ? "¡Correcto!" : "Incorrecto"}</p>
-        <p className="mt-1 flex flex-wrap items-center gap-2">
-          Tu descarte: <TileList tiles={[chosen.discard]} /> → {shantenLabel(chosen.shanten)}, ukeire{" "}
-          <strong>{chosen.ukeire.total}</strong>
-        </p>
-        {!correct && (
+        <div>
+          <p className="text-lg font-semibold short:text-base">{correct ? "¡Correcto!" : "Incorrecto"}</p>
           <p className="mt-1 flex flex-wrap items-center gap-2">
-            Óptimo: <TileList tiles={evaluation.bestDiscards} /> → {shantenLabel(best.shanten)}, ukeire{" "}
-            <strong>{best.ukeire.total}</strong>
+            Tu descarte: <TileList tiles={[chosen.discard]} /> → {shantenLabel(chosen.shanten)}, ukeire{" "}
+            <strong>{chosen.ukeire.total}</strong>
           </p>
-        )}
+          {!correct && (
+            <p className="mt-1 flex flex-wrap items-center gap-2">
+              Óptimo: <TileList tiles={evaluation.bestDiscards} /> → {shantenLabel(best.shanten)}, ukeire{" "}
+              <strong>{best.ukeire.total}</strong>
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onNext}
+          autoFocus
+          className="rounded-lg bg-zinc-900 px-5 py-2 font-semibold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        >
+          Siguiente problema →
+        </button>
       </div>
 
       <div className="overflow-x-auto">
