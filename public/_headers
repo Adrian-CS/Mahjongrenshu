@@ -1,0 +1,6 @@
+# Cloudflare Pages headers. The service worker must be revalidated on every load
+# so new deploys are picked up.
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache

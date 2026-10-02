@@ -43,10 +43,20 @@ npm run build   # export estático en out/
 - **Tiles SVG:** [FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles),
   dominio público (CC0), optimizados con svgo en `public/tiles/`.
 
+## PWA
+
+Instalable desde el navegador (Android: "Instalar app"; iOS: Compartir →
+"Añadir a pantalla de inicio"). El manifest (`src/app/manifest.ts`) pide
+pantalla completa y orientación horizontal; Android lo respeta, iOS ignora la
+orientación del manifest, así que ahí se muestra el aviso de girar el móvil.
+`public/sw.js` cachea la app y los tiles para jugar sin conexión: al cambiar
+la lista de assets precacheados, sube `VERSION`.
+
 ## Deploy (Cloudflare Pages)
 
 Build command `npm run build`, output directory `out` (o
-`npx wrangler pages deploy` con `wrangler.toml`).
+`npx wrangler pages deploy` con `wrangler.toml`). `public/_headers` evita que
+`sw.js` y el manifest queden cacheados entre deploys.
 
 ## Pendiente (Fase 2)
 
