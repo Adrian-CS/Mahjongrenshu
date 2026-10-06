@@ -1,7 +1,7 @@
 import { HandEvaluation, evaluateHand } from "./evaluator";
 import { GeneratorOptions, Problem, Rng, generateProblem } from "./generator";
 import { SHAPES, Shape, classifyTile } from "./shapes";
-import { toCounts } from "./tiles";
+import { Tile, toCounts } from "./tiles";
 
 /**
  * A problem's category is the shape its optimal discard is cut from
@@ -11,9 +11,14 @@ import { toCounts } from "./tiles";
  * partial shapes before complete ones), following the order of SHAPES.
  */
 export function problemCategory(problem: Problem, evaluation: HandEvaluation = evaluateHand(problemTiles(problem))): Shape {
+  return classifyTile(representativeDiscard(problem, evaluation), toCounts(problemTiles(problem)));
+}
+
+/** The optimal discard used to explain/categorise a problem: the most basic shape among the tied best. */
+export function representativeDiscard(problem: Problem, evaluation: HandEvaluation = evaluateHand(problemTiles(problem))): Tile {
   const counts = toCounts(problemTiles(problem));
-  const shapes = evaluation.bestDiscards.map((t) => classifyTile(t, counts));
-  return shapes.reduce((a, b) => (SHAPES.indexOf(b) < SHAPES.indexOf(a) ? b : a));
+  const rank = (t: Tile) => SHAPES.indexOf(classifyTile(t, counts));
+  return evaluation.bestDiscards.reduce((a, b) => (rank(b) < rank(a) ? b : a));
 }
 
 export function problemTiles(problem: Problem) {

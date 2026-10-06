@@ -31,6 +31,9 @@ haya servidor.
 | HandRow          | `src/components/HandRow.tsx` |
 | ResultPanel      | `src/components/ResultPanel.tsx` |
 | GameController   | `src/hooks/useGameController.ts` |
+| Lectura de la mano | `src/lib/mahjong/decomposition.ts` |
+| Explicaciones    | `src/lib/mahjong/explain.ts`, `src/components/ExplanationPanel.tsx` |
+| Lecciones        | `src/lib/lessons.ts` (validadas en `src/lib/__tests__/lessons.test.ts`) |
 | Categorías / repaso | `src/lib/mahjong/shapes.ts`, `src/lib/mahjong/review.ts` |
 | API              | `functions/api/attempts.ts` (POST), `functions/api/stats.ts` (GET) |
 | Esquema D1       | `migrations/0001_attempts.sql` |
@@ -65,6 +68,18 @@ la lista de assets precacheados, sube `VERSION`.
 Build command `npm run build`, output directory `out` (o
 `npx wrangler pages deploy` con `wrangler.toml`). `public/_headers` evita que
 `sw.js` y el manifest queden cacheados entre deploys.
+
+## Explicaciones y lecciones
+
+- **Explicación automática** tras cada respuesta, en todos los modos: cómo se
+  lee la mano tras el descarte óptimo (secuencias, parejas, esperas, sueltos),
+  qué tiles pierdes con tu descarte, el recuento de bloques cuando sobra uno y
+  el principio de eficiencia que aplica. Todo sale del motor.
+- **Modo Lecciones:** problemas escogidos a mano por concepto con explicación
+  escrita. Los tests comprueban cada lección contra el motor (descarte óptimo y
+  cifras citadas en el texto). No cuentan para marcador, estadísticas ni
+  repaso; el progreso (✓) se guarda en el dispositivo. Para añadir una, sigue
+  el formato de `LESSONS` y añade sus cifras al test.
 
 ## Fase 2: progreso y repaso (D1 + Cloudflare Access)
 

@@ -1,18 +1,7 @@
-import { Tile, tileToString } from "@/lib/mahjong";
-
-const TILE_NAMES: Record<string, string> = {
-  "1z": "Este",
-  "2z": "Sur",
-  "3z": "Oeste",
-  "4z": "Norte",
-  "5z": "Haku",
-  "6z": "Hatsu",
-  "7z": "Chun",
-};
+import { Tile, tileName, tileToString } from "@/lib/mahjong";
 
 export function tileLabel(tile: Tile): string {
-  const code = tileToString(tile);
-  return TILE_NAMES[code] ?? code;
+  return tileName(tile);
 }
 
 const SIZES = {

@@ -25,6 +25,13 @@ export function tileToString(tile: Tile): string {
   return `${rank}${SUIT_CHARS[suit]}`;
 }
 
+const HONOR_NAMES = ["Este", "Sur", "Oeste", "Norte", "Haku", "Hatsu", "Chun"];
+
+/** Display name: "3m", "7s" or the honor's name ("Este", "Chun"...). */
+export function tileName(tile: Tile): string {
+  return isHonor(tile) ? HONOR_NAMES[tile - 27] : tileToString(tile);
+}
+
 export function isHonor(tile: Tile): boolean {
   return tile >= 27;
 }

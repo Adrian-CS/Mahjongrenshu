@@ -1,4 +1,6 @@
-import { DiscardOption, HandEvaluation, Shape, Tile } from "@/lib/mahjong";
+import { DiscardOption, Explanation, HandEvaluation, Shape, Tile } from "@/lib/mahjong";
+import type { Lesson } from "@/lib/lessons";
+import { ExplanationPanel } from "./ExplanationPanel";
 import { SHAPE_LABELS } from "./shapeLabels";
 import { TileDisplay } from "./TileDisplay";
 
@@ -7,6 +9,8 @@ interface ResultPanelProps {
   chosen: DiscardOption;
   correct: boolean;
   category: Shape | null;
+  explanation: Explanation | null;
+  lesson: Lesson | null;
   generating: boolean;
   onNext: () => void;
 }
@@ -27,7 +31,7 @@ function TileList({ tiles }: { tiles: Tile[] }) {
   );
 }
 
-export function ResultPanel({ evaluation, chosen, correct, category, generating, onNext }: ResultPanelProps) {
+export function ResultPanel({ evaluation, chosen, correct, category, explanation, lesson, generating, onNext }: ResultPanelProps) {
   const best = evaluation.options[0];
   return (
     <section className="w-full space-y-4">
@@ -48,7 +52,7 @@ export function ResultPanel({ evaluation, chosen, correct, category, generating,
               <strong>{best.ukeire.total}</strong>
             </p>
           )}
-          {category && <p className="mt-1 text-sm opacity-80">Tipo de problema: {SHAPE_LABELS[category]}</p>}
+          {category && !lesson && <p className="mt-1 text-sm opacity-80">Tipo de problema: {SHAPE_LABELS[category]}</p>}
         </div>
         <button
           type="button"
@@ -57,9 +61,11 @@ export function ResultPanel({ evaluation, chosen, correct, category, generating,
           autoFocus
           className="rounded-lg bg-zinc-900 px-5 py-2 font-semibold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
         >
-          {generating ? "Generando…" : "Siguiente problema →"}
+          {generating ? "Generando…" : lesson ? "Siguiente lección →" : "Siguiente problema →"}
         </button>
       </div>
+
+      {explanation && <ExplanationPanel explanation={explanation} lesson={lesson} />}
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">

@@ -5,6 +5,7 @@ import { ResultPanel, shantenLabel } from "@/components/ResultPanel";
 import { StatsPanel } from "@/components/StatsPanel";
 import { SHAPE_LABELS } from "@/components/shapeLabels";
 import { DIFFICULTIES, Mode, useGameController } from "@/hooks/useGameController";
+import { LESSONS } from "@/lib/lessons";
 
 export default function Home() {
   const game = useGameController();
@@ -26,19 +27,36 @@ export default function Home() {
           >
             <option value="normal">Modo normal</option>
             <option value="review">Repaso de fallos</option>
+            <option value="lessons">Lecciones</option>
           </select>
-          <select
-            aria-label="Dificultad"
-            value={game.difficulty.id}
-            onChange={(e) => game.changeDifficulty(e.target.value)}
-            className="rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
-          >
-            {DIFFICULTIES.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.label}
-              </option>
-            ))}
-          </select>
+          {game.mode === "lessons" ? (
+            <select
+              aria-label="Lección"
+              value={game.lessonIndex}
+              onChange={(e) => game.selectLesson(Number(e.target.value))}
+              className="max-w-56 rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
+            >
+              {LESSONS.map((l, i) => (
+                <option key={l.id} value={i}>
+                  {game.lessonProgress[l.id] ? "✓ " : ""}
+                  {i + 1}. {l.title}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              aria-label="Dificultad"
+              value={game.difficulty.id}
+              onChange={(e) => game.changeDifficulty(e.target.value)}
+              className="rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
+            >
+              {DIFFICULTIES.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          )}
           <span className="tabular-nums" title="Aciertos / intentos · racha">
             {score.correct}/{score.total} · racha {score.streak}
           </span>
@@ -49,6 +67,11 @@ export default function Home() {
         <>
           <div className="w-full rounded-xl bg-emerald-800 px-2 py-4 shadow-inner sm:px-4 short:py-2">
             <p className="mb-1 text-center text-sm text-emerald-100">
+              {game.lesson && (
+                <span className="mr-2 rounded bg-amber-300 px-1.5 py-0.5 font-semibold text-amber-950">
+                  Lección {game.lessonIndex + 1}/{LESSONS.length}: {game.lesson.title}
+                </span>
+              )}
               {game.reviewCategory && (
                 <span className="mr-2 rounded bg-amber-300 px-1.5 py-0.5 font-semibold text-amber-950">
                   Repaso: {SHAPE_LABELS[game.reviewCategory]}
@@ -72,6 +95,8 @@ export default function Home() {
               chosen={chosen}
               correct={correct}
               category={game.category}
+              explanation={game.explanation}
+              lesson={game.lesson}
               generating={game.generating}
               onNext={game.nextProblem}
             />
