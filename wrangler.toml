@@ -5,7 +5,8 @@ pages_build_output_dir = "out"
 compatibility_date = "2026-10-01"
 
 [[d1_databases]]
-binding = "nanikiru"
+# Must stay "DB": functions/_lib.ts reads env.DB.
+binding = "DB"
 database_name = "nanikiru"
 database_id = "bf08364c-0f5d-4c25-8946-f9a3abbd083f"
 migrations_dir = "migrations"
