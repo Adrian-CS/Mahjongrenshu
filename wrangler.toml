@@ -5,8 +5,7 @@ pages_build_output_dir = "out"
 compatibility_date = "2026-10-01"
 
 [[d1_databases]]
-binding = "DB"
+binding = "nanikiru"
 database_name = "nanikiru"
-# Replace with the id printed by `npx wrangler d1 create nanikiru`.
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "bf08364c-0f5d-4c25-8946-f9a3abbd083f"
 migrations_dir = "migrations"
