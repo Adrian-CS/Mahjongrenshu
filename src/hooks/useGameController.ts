@@ -88,6 +88,7 @@ export function useGameController() {
   const [score, setScore] = useState<Score>({ correct: 0, total: 0, streak: 0 });
   const [stats, setStats] = useState<Stats>({ categories: [], overall: { total: 0, correct: 0 } });
   const [statsSynced, setStatsSynced] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
   const [lessonIndex, setLessonIndex] = useState(0);
   const [lessonProgress, setLessonProgress] = useState<LessonProgress>({});
 
@@ -128,9 +129,9 @@ export function useGameController() {
     nextProblem();
     setLessonProgress(loadLessonProgress());
     void flushAttempts();
-    fetchStats().then((s) => {
-      if (!s) return;
-      setStats(s);
+    fetchStats().then((r) => {
+      if (!r.ok) return setStatsError(r.reason);
+      setStats(r.stats);
       setStatsSynced(true);
     });
     const onOnline = () => void flushAttempts();
@@ -212,6 +213,7 @@ export function useGameController() {
     score,
     stats,
     statsSynced,
+    statsError,
     difficulty,
     mode,
     discard,

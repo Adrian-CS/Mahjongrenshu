@@ -73,12 +73,23 @@ export function saveAttempt(attempt: AttemptRecord): void {
   void flushAttempts();
 }
 
-export async function fetchStats(): Promise<Stats | null> {
+export type StatsResult = { ok: true; stats: Stats } | { ok: false; reason: string };
+
+/** Loads server stats; on failure says why, so setup problems are visible in the app. */
+export async function fetchStats(): Promise<StatsResult> {
+  let res: Response;
   try {
-    const res = await fetch("/api/stats", { cache: "no-store" });
-    if (!res.ok || !res.headers.get("content-type")?.includes("json")) return null;
-    return (await res.json()) as Stats;
+    res = await fetch("/api/stats", { cache: "no-store" });
   } catch {
-    return null;
+    return { ok: false, reason: "sin conexión" };
   }
+  const isJson = res.headers.get("content-type")?.includes("json");
+  if (res.ok && isJson) return { ok: true, stats: (await res.json()) as Stats };
+  if (isJson) {
+    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    if (body?.message) return { ok: false, reason: body.message };
+  }
+  if (res.status === 404) return { ok: false, reason: "la API no está desplegada (404 en /api/stats)" };
+  if (res.ok) return { ok: false, reason: "la API no respondió JSON (¿login de Cloudflare Access?)" };
+  return { ok: false, reason: `error ${res.status} en /api/stats` };
 }

@@ -113,7 +113,7 @@ export default function Home() {
         <p className="text-zinc-500">Generando mano…</p>
       )}
 
-      <StatsPanel stats={game.stats} synced={game.statsSynced} />
+      <StatsPanel stats={game.stats} synced={game.statsSynced} error={game.statsError} />
 
       <footer className="mt-auto pt-8 text-xs text-zinc-500 short:pt-2">
         Tiles: FluffyStuff/riichi-mahjong-tiles (CC0). Ukeire contado sobre las copias no visibles en tu mano.

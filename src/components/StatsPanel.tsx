@@ -5,10 +5,12 @@ import { SHAPE_LABELS } from "./shapeLabels";
 interface StatsPanelProps {
   stats: Stats;
   synced: boolean;
+  /** Why server stats could not be loaded, if they couldn't. */
+  error: string | null;
 }
 
 /** Per-category accuracy over recent attempts, weakest first. */
-export function StatsPanel({ stats, synced }: StatsPanelProps) {
+export function StatsPanel({ stats, synced, error }: StatsPanelProps) {
   const rows = [...stats.categories].sort((a, b) => weakness(b) - weakness(a));
   const pct = (correct: number, total: number) => (total ? `${Math.round((100 * correct) / total)}%` : "–");
 
@@ -16,7 +18,11 @@ export function StatsPanel({ stats, synced }: StatsPanelProps) {
     <details className="w-full rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800">
       <summary className="cursor-pointer font-semibold">
         Estadísticas · {stats.overall.correct}/{stats.overall.total} ({pct(stats.overall.correct, stats.overall.total)})
-        {!synced && <span className="ml-2 font-normal text-zinc-500">(sin conexión con el servidor: solo esta sesión)</span>}
+        {!synced && (
+          <span className="ml-2 font-normal text-zinc-500">
+            (sin datos del servidor: solo esta sesión{error ? ` · ${error}` : ""})
+          </span>
+        )}
       </summary>
       {rows.length === 0 ? (
         <p className="mt-2 text-zinc-500">Aún no hay intentos.</p>
