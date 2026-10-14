@@ -28,7 +28,8 @@ export default function Home() {
             className="rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
           >
             <option value="normal">Modo normal</option>
-            <option value="review">Repaso de fallos</option>
+            <option value="review">Repaso por tipo de fallo</option>
+            <option value="mistakes">Repetir mis fallos</option>
             <option value="lessons">Lecciones</option>
             <option value="timed">Contrarreloj</option>
             <option value="analyze">Analizar mi mano</option>
@@ -50,7 +51,7 @@ export default function Home() {
                 </option>
               ))}
             </select>
-          ) : game.mode === "analyze" ? null : (
+          ) : game.mode === "analyze" || game.mode === "mistakes" ? null : (
             <select
               aria-label="Dificultad"
               value={game.difficulty.id}
@@ -86,6 +87,18 @@ export default function Home() {
 
       {game.mode === "analyze" ? (
         <AnalyzeView />
+      ) : game.mode === "mistakes" && !problem && !game.generating ? (
+        <div className="w-full rounded-xl border border-zinc-200 p-6 text-center dark:border-zinc-800">
+          {game.mistakesError ? (
+            <p>
+              No se pudieron cargar tus fallos: {game.mistakesError}. Este modo necesita conexión con el servidor.
+            </p>
+          ) : (
+            <p>
+              No tienes fallos pendientes. Cada mano que falles en los otros modos aparecerá aquí hasta que la aciertes.
+            </p>
+          )}
+        </div>
       ) : problem && evaluation ? (
         <>
           <div className="w-full rounded-xl bg-emerald-800 px-2 py-4 shadow-inner sm:px-4 short:py-2">
@@ -94,6 +107,12 @@ export default function Home() {
                 <span className="mr-2 rounded bg-amber-300 px-1.5 py-0.5 font-semibold text-amber-950">
                   Lección {game.lessonIndex + 1}/{LESSONS.length}: {game.lesson.title} · problema {game.lessonStep + 1}/
                   {LESSON_STEPS}
+                </span>
+              )}
+              {game.currentMistake && (
+                <span className="mr-2 rounded bg-amber-300 px-1.5 py-0.5 font-semibold text-amber-950">
+                  Fallo repetido · fallada {game.currentMistake.misses} {game.currentMistake.misses === 1 ? "vez" : "veces"} · quedan{" "}
+                  {game.mistakes?.length ?? 0}
                 </span>
               )}
               {game.reviewCategory && (

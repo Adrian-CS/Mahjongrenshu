@@ -93,3 +93,82 @@ export async function fetchStats(): Promise<StatsResult> {
   if (res.ok) return { ok: false, reason: "la API no respondió JSON (¿login de Cloudflare Access?)" };
   return { ok: false, reason: `error ${res.status} en /api/stats` };
 }
+
+// ---- repeat mistakes -----------------------------------------------------
+
+export interface Mistake {
+  hand: string;
+  draw: string;
+  /** Times this exact hand was answered wrong. */
+  misses: number;
+}
+
+export type MistakesResult = { ok: true; mistakes: Mistake[] } | { ok: false; reason: string };
+
+export async function fetchMistakes(): Promise<MistakesResult> {
+  try {
+    const res = await fetch("/api/mistakes", { cache: "no-store" });
+    const isJson = res.headers.get("content-type")?.includes("json");
+    const body = isJson ? ((await res.json()) as { mistakes?: Mistake[]; message?: string }) : null;
+    if (res.ok && body?.mistakes) return { ok: true, mistakes: body.mistakes };
+    return { ok: false, reason: body?.message ?? `error ${res.status} en /api/mistakes` };
+  } catch {
+    return { ok: false, reason: "sin conexión" };
+  }
+}
+
+/** Fire-and-forget: if it fails, the hand simply stays in the queue. */
+export function markMastered(hand: string, draw: string): void {
+  void fetch("/api/mistakes/mastered", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hand, draw }),
+  }).catch(() => undefined);
+}
+
+// ---- lesson progress sync ------------------------------------------------
+
+export interface SyncedLessonResult {
+  correct: number;
+  answered: number;
+  completed: boolean;
+  /** ISO timestamp; the latest update wins when merging devices. */
+  updatedAt: string;
+}
+
+export async function fetchLessonProgress(): Promise<Record<string, SyncedLessonResult> | null> {
+  try {
+    const res = await fetch("/api/lessons", { cache: "no-store" });
+    if (!res.ok || !res.headers.get("content-type")?.includes("json")) return null;
+    return ((await res.json()) as { progress: Record<string, SyncedLessonResult> }).progress;
+  } catch {
+    return null;
+  }
+}
+
+export function pushLessonProgress(entries: Record<string, SyncedLessonResult>): void {
+  const body = Object.entries(entries).map(([lessonId, r]) => ({ lessonId, ...r }));
+  if (body.length === 0) return;
+  void fetch("/api/lessons", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body.slice(0, 100)),
+  }).catch(() => undefined);
+}
+
+/** Per lesson, keep the most recently updated result; "completed" is never lost. */
+export function mergeLessonProgress(
+  a: Record<string, SyncedLessonResult>,
+  b: Record<string, SyncedLessonResult>,
+): Record<string, SyncedLessonResult> {
+  const out: Record<string, SyncedLessonResult> = { ...a };
+  for (const [id, r] of Object.entries(b)) {
+    const cur = out[id];
+    if (!cur) out[id] = r;
+    else {
+      const newer = Date.parse(r.updatedAt) > Date.parse(cur.updatedAt) ? r : cur;
+      out[id] = { ...newer, completed: cur.completed || r.completed };
+    }
+  }
+  return out;
+}

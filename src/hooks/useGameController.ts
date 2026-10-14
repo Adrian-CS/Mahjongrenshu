@@ -1,7 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AttemptRecord, Stats, fetchStats, flushAttempts, saveAttempt } from "@/lib/api";
+import {
+  AttemptRecord,
+  Mistake,
+  Stats,
+  fetchLessonProgress,
+  fetchMistakes,
+  fetchStats,
+  flushAttempts,
+  markMastered,
+  mergeLessonProgress,
+  pushLessonProgress,
+  saveAttempt,
+} from "@/lib/api";
 import { LESSONS, lessonProblem } from "@/lib/lessons";
 import { generatePracticeProblem } from "@/lib/lessonPractice";
 import {
@@ -19,8 +31,10 @@ import {
   isSameValue,
   pickReviewCategory,
   problemCategory,
+  parseHand,
   problemTiles,
   representativeDiscard,
+  sortTiles,
   tileToString,
   toCounts,
 } from "@/lib/mahjong";
@@ -38,7 +52,7 @@ export const DIFFICULTIES: Difficulty[] = [
   { id: "hard", label: "Difícil (2–3 shanten)", minShanten: 2, maxShanten: 3 },
 ];
 
-export type Mode = "normal" | "review" | "lessons" | "analyze" | "timed";
+export type Mode = "normal" | "review" | "lessons" | "analyze" | "timed" | "mistakes";
 
 /** Seconds per hand in timed mode. */
 export const TIME_LIMITS = [5, 10, 20];
@@ -53,13 +67,22 @@ export interface LessonResult {
   correct: number;
   answered: number;
   completed: boolean;
+  /** ISO timestamp, for syncing across devices (latest wins). */
+  updatedAt: string;
 }
 type LessonProgress = Record<string, LessonResult>;
 const LESSONS_KEY = "nanikiru:lessons-v2";
 
 function loadLessonProgress(): LessonProgress {
   try {
-    return JSON.parse(localStorage.getItem(LESSONS_KEY) ?? "{}") as LessonProgress;
+    const raw = JSON.parse(localStorage.getItem(LESSONS_KEY) ?? "{}") as Record<string, Partial<LessonResult>>;
+    // Entries saved before sync existed have no timestamp: treat them as oldest.
+    return Object.fromEntries(
+      Object.entries(raw).map(([id, r]) => [
+        id,
+        { correct: r.correct ?? 0, answered: r.answered ?? 0, completed: !!r.completed, updatedAt: r.updatedAt ?? new Date(0).toISOString() },
+      ]),
+    );
   } catch {
     return {};
   }
@@ -92,7 +115,7 @@ const SESSION_KEY = "nanikiru:session";
 function loadSession(): SavedSession | null {
   try {
     const s = JSON.parse(localStorage.getItem(SESSION_KEY) ?? "null") as SavedSession | null;
-    if (!s || !["normal", "review", "lessons", "analyze", "timed"].includes(s.mode)) return null;
+    if (!s || !["normal", "review", "lessons", "analyze", "timed", "mistakes"].includes(s.mode)) return null;
     // Reject a corrupted or outdated saved hand rather than crash on it.
     if (s.problem) evaluateHand(problemTiles(s.problem));
     return s;
@@ -139,6 +162,13 @@ export function useGameController() {
   /** Timed mode: when the current hand runs out of time (ms epoch), or null. */
   const [deadline, setDeadline] = useState<number | null>(null);
   const [timedOut, setTimedOut] = useState(false);
+  /** Repeat-mistakes queue (null until loaded) and why it couldn't load. */
+  const [mistakes, setMistakes] = useState<Mistake[] | null>(null);
+  const [mistakesError, setMistakesError] = useState<string | null>(null);
+  const mistakesRef = useRef<Mistake[] | null>(null);
+  useEffect(() => {
+    mistakesRef.current = mistakes;
+  }, [mistakes]);
   const [chosenIndex, setChosenIndex] = useState<number | null>(null);
   const [score, setScore] = useState<Score>({ correct: 0, total: 0, streak: 0 });
   const [stats, setStats] = useState<Stats>({ categories: [], overall: { total: 0, correct: 0 } });
@@ -163,6 +193,31 @@ export function useGameController() {
         setProblem(null);
         setChosenIndex(null);
         setTimedOut(false);
+        return;
+      }
+      if (m === "mistakes") {
+        setGenerating(true);
+        setChosenIndex(null);
+        setTimedOut(false);
+        setReviewCategory(null);
+        const show = (queue: Mistake[]) => {
+          const next = queue[0];
+          setProblem(next ? { hand: sortTiles(parseHand(next.hand)), draw: parseHand(next.draw)[0] } : null);
+          setGenerating(false);
+        };
+        if (mistakesRef.current) show(mistakesRef.current);
+        else
+          fetchMistakes().then((r) => {
+            if (!r.ok) {
+              setMistakesError(r.reason);
+              setMistakes([]);
+              return show([]);
+            }
+            setMistakesError(null);
+            setMistakes(r.mistakes);
+            mistakesRef.current = r.mistakes;
+            show(r.mistakes);
+          });
         return;
       }
       if (m === "lessons") {
@@ -216,14 +271,26 @@ export function useGameController() {
       } else {
         nextProblem(d, m, idx, step);
       }
-    } else if (saved?.problem && !saved.answered) {
+    } else if (saved?.problem && !saved.answered && m !== "mistakes") {
       setProblem(saved.problem);
       setReviewCategory(saved.reviewCategory);
     } else {
       nextProblem(d, m);
     }
     setRestored(true);
-    setLessonProgress(loadLessonProgress());
+    const localLessons = loadLessonProgress();
+    setLessonProgress(localLessons);
+    // Sync lesson progress: merge with the server, then send back what the server lacks.
+    fetchLessonProgress().then((server) => {
+      if (!server) return;
+      const merged = mergeLessonProgress(localLessons, server);
+      setLessonProgress(merged);
+      storeLessonProgress(merged);
+      const toPush = Object.fromEntries(
+        Object.entries(merged).filter(([id, r]) => !server[id] || Date.parse(r.updatedAt) > Date.parse(server[id].updatedAt) || r.completed !== server[id].completed),
+      );
+      pushLessonProgress(toPush);
+    });
     void flushAttempts();
     fetchStats().then((r) => {
       if (!r.ok) return setStatsError(r.reason);
@@ -295,14 +362,16 @@ export function useGameController() {
       const id = LESSONS[lessonIndex].id;
       setLessonProgress((p) => {
         // Starting a lesson (its worked example) begins a new run.
-        const prev = lessonStep === 0 ? { correct: 0, answered: 0, completed: false } : (p[id] ?? { correct: 0, answered: 0, completed: false });
+        const prev = lessonStep === 0 || !p[id] ? { correct: 0, answered: 0 } : p[id];
         const result: LessonResult = {
           correct: prev.correct + (ok ? 1 : 0),
           answered: prev.answered + 1,
           completed: (p[id]?.completed ?? false) || lessonStep === LESSON_STEPS - 1,
+          updatedAt: new Date().toISOString(),
         };
         const next = { ...p, [id]: result };
         storeLessonProgress(next);
+        pushLessonProgress({ [id]: result });
         return next;
       });
       return;
@@ -310,6 +379,22 @@ export function useGameController() {
 
     setScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1, streak: ok ? s.streak + 1 : 0 }));
     setStats((s) => addResult(s, category, ok));
+
+    if (mode === "mistakes") {
+      // Right: the hand is mastered and leaves the queue. Wrong: it goes to the back.
+      const hand = formatHand(problem.hand);
+      const draw = tileToString(problem.draw);
+      const same = (x: Mistake) => x.hand === hand && x.draw === draw;
+      if (ok) markMastered(hand, draw);
+      setMistakes((q) => {
+        if (!q) return q;
+        const current = q.find(same);
+        const rest = q.filter((x) => !same(x));
+        const next = ok || !current ? rest : [...rest, { ...current, misses: current.misses + 1 }];
+        mistakesRef.current = next;
+        return next;
+      });
+    }
 
     const record: AttemptRecord = {
       hand: formatHand(problem.hand),
@@ -333,6 +418,11 @@ export function useGameController() {
   };
 
   const changeMode = (m: Mode) => {
+    // Reload the mistakes queue each time the mode is entered.
+    if (m === "mistakes") {
+      mistakesRef.current = null;
+      setMistakes(null);
+    }
     setMode(m);
     nextProblem(difficulty, m);
   };
@@ -354,6 +444,12 @@ export function useGameController() {
     chosenIndex,
     chosen,
     timedOut,
+    mistakes,
+    mistakesError,
+    currentMistake:
+      mode === "mistakes" && problem
+        ? (mistakes?.find((x) => x.hand === formatHand(problem.hand) && x.draw === tileToString(problem.draw)) ?? null)
+        : null,
     deadline,
     timeLimit,
     changeTimeLimit: (seconds: number) => setTimeLimit(seconds),

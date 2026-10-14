@@ -35,8 +35,8 @@ haya servidor.
 | Explicaciones    | `src/lib/mahjong/explain.ts`, `src/components/ExplanationPanel.tsx` |
 | Lecciones        | `src/lib/lessons.ts` (validadas en `src/lib/__tests__/lessons.test.ts`) |
 | Categorías / repaso | `src/lib/mahjong/shapes.ts`, `src/lib/mahjong/review.ts` |
-| API              | `functions/api/attempts.ts` (POST), `functions/api/stats.ts` (GET) |
-| Esquema D1       | `migrations/0001_attempts.sql` |
+| API              | `functions/api/`: `attempts` (POST), `stats` (GET), `mistakes` (GET) y `mistakes/mastered` (POST), `lessons` (GET/PUT) |
+| Esquema D1       | `migrations/` (intentos, fallos dominados, progreso de lecciones) |
 
 ## Decisiones
 
@@ -96,6 +96,17 @@ Build command `npm run build`, output directory `out` (o
   añadir una lección: su ejemplo en `LESSONS` (con cifras en el test) y su
   constructor en `PRACTICE`.
 
+## Más modos
+
+- **Contrarreloj:** 5, 10 o 20 segundos por mano; si se acaba el tiempo cuenta
+  como fallo y se muestra la respuesta explicada.
+- **Repetir mis fallos:** las manos exactas que has fallado (de cualquier modo)
+  vuelven hasta que las aciertas; entonces se marcan `mastered` en D1. Necesita
+  conexión.
+- **Analizar mi mano:** monta una mano de una partida real (paleta de tiles o
+  notación pegada) y ve el mejor descarte, la tabla y la explicación de
+  cualquier corte.
+
 ## Fase 2: progreso y repaso (D1 + Cloudflare Access)
 
 - **Datos:** cada respuesta se guarda en la tabla `attempts` de D1 a través de
@@ -115,7 +126,8 @@ Build command `npm run build`, output directory `out` (o
 ### Puesta en marcha en Cloudflare
 
 1. `npx wrangler d1 create nanikiru` y copia el `database_id` en `wrangler.toml`.
-2. `npm run db:migrate:remote`.
+2. `npm run db:migrate:remote` (repítelo cada vez que haya una migración nueva
+   en `migrations/`; la app avisa en Estadísticas si falta alguna).
 3. Pages → proyecto conectado al repo: build `npm run build`, salida `out`. El
    binding `DB` se lee de `wrangler.toml`.
 4. Zero Trust → Access → Applications → *Self-hosted*: dominio de la app (y

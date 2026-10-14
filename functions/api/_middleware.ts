@@ -15,9 +15,9 @@ export const onRequest: PagesFunction<Env> = async ({ env, next }) => {
     return await next();
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    if (/no such table/i.test(detail)) {
+    if (/no such (table|column)/i.test(detail)) {
       return json(
-        { error: "missing-table", message: "La tabla attempts no existe en D1: ejecuta npm run db:migrate:remote." },
+        { error: "missing-migration", message: "Faltan migraciones en D1: ejecuta npm run db:migrate:remote." },
         { status: 500 },
       );
     }
