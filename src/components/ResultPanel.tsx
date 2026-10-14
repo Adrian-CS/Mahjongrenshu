@@ -1,6 +1,8 @@
 import { DiscardOption, Explanation, HandEvaluation, Shape, Tile } from "@/lib/mahjong";
 import type { Lesson } from "@/lib/lessons";
 import { ExplanationPanel } from "./ExplanationPanel";
+import { shantenLabel } from "./labels";
+import { UkeireTable } from "./UkeireTable";
 import { SHAPE_LABELS } from "./shapeLabels";
 import { TileDisplay } from "./TileDisplay";
 
@@ -18,11 +20,7 @@ interface ResultPanelProps {
   onNext: () => void;
 }
 
-export function shantenLabel(shanten: number): string {
-  if (shanten === -1) return "agari";
-  if (shanten === 0) return "tenpai";
-  return `${shanten}-shanten`;
-}
+export { shantenLabel };
 
 function TileList({ tiles }: { tiles: Tile[] }) {
   return (
@@ -70,48 +68,7 @@ export function ResultPanel({ evaluation, chosen, correct, category, explanation
 
       {explanation && <ExplanationPanel explanation={explanation} lesson={lesson} lessonStep={lessonStep} />}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-zinc-500">
-            <tr>
-              <th className="py-1 pr-3 font-medium">Descarte</th>
-              <th className="py-1 pr-3 font-medium">Resultado</th>
-              <th className="py-1 pr-3 font-medium">Ukeire</th>
-              <th className="py-1 font-medium">Tiles que mejoran</th>
-            </tr>
-          </thead>
-          <tbody>
-            {evaluation.options.map((o) => {
-              const isBest = evaluation.bestDiscards.includes(o.discard);
-              const isChosen = o.discard === chosen.discard;
-              return (
-                <tr
-                  key={o.discard}
-                  className={`border-t border-zinc-200 dark:border-zinc-800 ${isBest ? "bg-emerald-50 dark:bg-emerald-950/40" : ""} ${
-                    isChosen && !isBest ? "bg-red-50 dark:bg-red-950/40" : ""
-                  }`}
-                >
-                  <td className="py-1 pr-3">
-                    <TileList tiles={[o.discard]} />
-                  </td>
-                  <td className="py-1 pr-3 whitespace-nowrap">{shantenLabel(o.shanten)}</td>
-                  <td className="py-1 pr-3 font-semibold tabular-nums">
-                    {o.ukeire.total} <span className="font-normal text-zinc-500">({o.ukeire.tiles.length} tipos)</span>
-                    {o.improvement && (
-                      <span className="block text-xs font-normal text-zinc-500" title="Tiles que mejoran la forma sin avanzar la mano">
-                        +{o.improvement.total} de mejora
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-1">
-                    <TileList tiles={o.ukeire.tiles.map((u) => u.tile)} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <UkeireTable evaluation={evaluation} chosen={chosen.discard} />
     </section>
   );
 }

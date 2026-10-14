@@ -37,7 +37,7 @@ export const DIFFICULTIES: Difficulty[] = [
   { id: "hard", label: "Difícil (2–3 shanten)", minShanten: 2, maxShanten: 3 },
 ];
 
-export type Mode = "normal" | "review" | "lessons";
+export type Mode = "normal" | "review" | "lessons" | "analyze";
 
 /** Practice problems after each lesson's worked example. */
 export const PRACTICE_PER_LESSON = 5;
@@ -87,7 +87,7 @@ const SESSION_KEY = "nanikiru:session";
 function loadSession(): SavedSession | null {
   try {
     const s = JSON.parse(localStorage.getItem(SESSION_KEY) ?? "null") as SavedSession | null;
-    if (!s || !["normal", "review", "lessons"].includes(s.mode)) return null;
+    if (!s || !["normal", "review", "lessons", "analyze"].includes(s.mode)) return null;
     // Reject a corrupted or outdated saved hand rather than crash on it.
     if (s.problem) evaluateHand(problemTiles(s.problem));
     return s;
@@ -149,6 +149,12 @@ export function useGameController() {
 
   const nextProblem = useCallback(
     (d: Difficulty = difficulty, m: Mode = mode, lesson?: number, step = 0) => {
+      // Hand analysis has its own view and state (AnalyzeView).
+      if (m === "analyze") {
+        setProblem(null);
+        setChosenIndex(null);
+        return;
+      }
       if (m === "lessons") {
         const idx = lesson ?? lessonIndex;
         setLessonIndex(idx);

@@ -1,5 +1,6 @@
 "use client";
 
+import { AnalyzeView } from "@/components/AnalyzeView";
 import { HandRow } from "@/components/HandRow";
 import { ResultPanel, shantenLabel } from "@/components/ResultPanel";
 import { StatsPanel } from "@/components/StatsPanel";
@@ -28,6 +29,7 @@ export default function Home() {
             <option value="normal">Modo normal</option>
             <option value="review">Repaso de fallos</option>
             <option value="lessons">Lecciones</option>
+            <option value="analyze">Analizar mi mano</option>
           </select>
           {game.mode === "lessons" ? (
             <select
@@ -46,7 +48,7 @@ export default function Home() {
                 </option>
               ))}
             </select>
-          ) : (
+          ) : game.mode === "analyze" ? null : (
             <select
               aria-label="Dificultad"
               value={game.difficulty.id}
@@ -66,7 +68,9 @@ export default function Home() {
         </div>
       </header>
 
-      {problem && evaluation ? (
+      {game.mode === "analyze" ? (
+        <AnalyzeView />
+      ) : problem && evaluation ? (
         <>
           <div className="w-full rounded-xl bg-emerald-800 px-2 py-4 shadow-inner sm:px-4 short:py-2">
             <p className="mb-1 text-center text-sm text-emerald-100">
