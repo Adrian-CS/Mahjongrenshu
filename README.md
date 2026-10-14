@@ -80,11 +80,16 @@ Build command `npm run build`, output directory `out` (o
   bloque (1s/2s de un penchan). Ver `hasClearAnswer` en `review.ts`.
 - **Retomar donde lo dejaste:** modo, dificultad, lección, marcador y problema
   sin responder se guardan en el dispositivo (`localStorage`).
-- **Modo Lecciones (15):** problemas escogidos a mano por concepto con explicación
-  escrita. Los tests comprueban cada lección contra el motor (descarte óptimo y
-  cifras citadas en el texto). No cuentan para marcador, estadísticas ni
-  repaso; el progreso (✓) se guarda en el dispositivo. Para añadir una, sigue
-  el formato de `LESSONS` y añade sus cifras al test.
+- **Modo Lecciones (15):** cada lección empieza con un ejemplo escogido a
+  mano y explicado por escrito (`src/lib/lessons.ts`, verificado en
+  `lessons.test.ts`), seguido de 5 problemas de práctica nuevos del mismo
+  concepto (`src/lib/lessonPractice.ts`). Cada práctica se monta con los
+  bloques del concepto en palos y números al azar, sin que se toquen entre sí,
+  y solo se usa si el motor confirma que el descarte óptimo es el que enseña la
+  lección. Las lecciones no cuentan para marcador, estadísticas ni repaso; el
+  progreso (✓ y aciertos de la última vez) se guarda en el dispositivo. Para
+  añadir una lección: su ejemplo en `LESSONS` (con cifras en el test) y su
+  constructor en `PRACTICE`.
 
 ## Fase 2: progreso y repaso (D1 + Cloudflare Access)
 

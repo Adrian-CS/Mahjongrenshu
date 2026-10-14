@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AttemptRecord, Stats, fetchStats, flushAttempts, saveAttempt } from "@/lib/api";
 import { LESSONS, lessonProblem } from "@/lib/lessons";
+import { generatePracticeProblem } from "@/lib/lessonPractice";
 import {
   CategoryStats,
   HandEvaluation,
@@ -38,9 +39,19 @@ export const DIFFICULTIES: Difficulty[] = [
 
 export type Mode = "normal" | "review" | "lessons";
 
-/** Lesson id -> answered correctly at least once. Kept per device. */
-type LessonProgress = Record<string, boolean>;
-const LESSONS_KEY = "nanikiru:lessons";
+/** Practice problems after each lesson's worked example. */
+export const PRACTICE_PER_LESSON = 5;
+/** Steps per lesson: the worked example (step 0) plus the practice problems. */
+export const LESSON_STEPS = 1 + PRACTICE_PER_LESSON;
+
+/** Per lesson: correct answers in the latest run and whether it was ever finished. Kept per device. */
+export interface LessonResult {
+  correct: number;
+  answered: number;
+  completed: boolean;
+}
+type LessonProgress = Record<string, LessonResult>;
+const LESSONS_KEY = "nanikiru:lessons-v2";
 
 function loadLessonProgress(): LessonProgress {
   try {
@@ -64,6 +75,7 @@ interface SavedSession {
   difficultyId: string;
   /** By id, so adding or reordering lessons doesn't move the player. */
   lessonId: string;
+  lessonStep: number;
   /** Current problem, if it was still unanswered. */
   problem: Problem | null;
   reviewCategory: Shape | null;
@@ -124,6 +136,7 @@ export function useGameController() {
   const [statsSynced, setStatsSynced] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [lessonIndex, setLessonIndex] = useState(0);
+  const [lessonStep, setLessonStep] = useState(0);
   const [lessonProgress, setLessonProgress] = useState<LessonProgress>({});
   // Don't persist anything until the saved session has been restored.
   const [restored, setRestored] = useState(false);
@@ -135,11 +148,14 @@ export function useGameController() {
   }, [stats]);
 
   const nextProblem = useCallback(
-    (d: Difficulty = difficulty, m: Mode = mode, lesson?: number) => {
+    (d: Difficulty = difficulty, m: Mode = mode, lesson?: number, step = 0) => {
       if (m === "lessons") {
         const idx = lesson ?? lessonIndex;
         setLessonIndex(idx);
-        setProblem(lessonProblem(LESSONS[idx]));
+        setLessonStep(step);
+        // Step 0 is the worked example; later steps are fresh hands of the same concept.
+        const practice = step > 0 ? generatePracticeProblem(LESSONS[idx].id) : null;
+        setProblem(practice ?? lessonProblem(LESSONS[idx]));
         setReviewCategory(null);
         setChosenIndex(null);
         return;
@@ -170,7 +186,17 @@ export function useGameController() {
     if (saved) setScore(saved.score);
     if (m === "lessons") {
       const idx = Math.max(LESSONS.findIndex((l) => l.id === saved?.lessonId), 0);
-      nextProblem(d, m, saved?.answered ? (idx + 1) % LESSONS.length : idx);
+      const step = Math.min(Math.max(saved?.lessonStep ?? 0, 0), LESSON_STEPS - 1);
+      if (saved?.answered) {
+        const [nextIdx, nextStep] = step + 1 < LESSON_STEPS ? [idx, step + 1] : [(idx + 1) % LESSONS.length, 0];
+        nextProblem(d, m, nextIdx, nextStep);
+      } else if (saved?.problem && step > 0) {
+        setLessonIndex(idx);
+        setLessonStep(step);
+        setProblem(saved.problem);
+      } else {
+        nextProblem(d, m, idx, step);
+      }
     } else if (saved?.problem && !saved.answered) {
       setProblem(saved.problem);
       setReviewCategory(saved.reviewCategory);
@@ -197,12 +223,13 @@ export function useGameController() {
       mode,
       difficultyId: difficulty.id,
       lessonId: LESSONS[lessonIndex].id,
-      problem: mode === "lessons" ? null : problem,
+      lessonStep,
+      problem: mode === "lessons" && lessonStep === 0 ? null : problem,
       reviewCategory,
       answered: chosenIndex !== null,
       score,
     });
-  }, [restored, mode, difficulty, lessonIndex, problem, reviewCategory, chosenIndex, score]);
+  }, [restored, mode, difficulty, lessonIndex, lessonStep, problem, reviewCategory, chosenIndex, score]);
 
   const evaluation: HandEvaluation | null = useMemo(() => (problem ? evaluateHand(problemTiles(problem)) : null), [problem]);
   const category = useMemo(() => (problem && evaluation ? problemCategory(problem, evaluation) : null), [problem, evaluation]);
@@ -227,7 +254,14 @@ export function useGameController() {
       // Lessons are for learning: they don't count towards score, stats or review.
       const id = LESSONS[lessonIndex].id;
       setLessonProgress((p) => {
-        const next = { ...p, [id]: p[id] || ok };
+        // Starting a lesson (its worked example) begins a new run.
+        const prev = lessonStep === 0 ? { correct: 0, answered: 0, completed: false } : (p[id] ?? { correct: 0, answered: 0, completed: false });
+        const result: LessonResult = {
+          correct: prev.correct + (ok ? 1 : 0),
+          answered: prev.answered + 1,
+          completed: (p[id]?.completed ?? false) || lessonStep === LESSON_STEPS - 1,
+        };
+        const next = { ...p, [id]: result };
         storeLessonProgress(next);
         return next;
       });
@@ -263,7 +297,13 @@ export function useGameController() {
     nextProblem(difficulty, m);
   };
 
-  const selectLesson = (idx: number) => nextProblem(difficulty, "lessons", idx);
+  const selectLesson = (idx: number) => nextProblem(difficulty, "lessons", idx, 0);
+
+  const next = () => {
+    if (mode !== "lessons") return nextProblem(difficulty, mode);
+    if (lessonStep + 1 < LESSON_STEPS) return nextProblem(difficulty, mode, lessonIndex, lessonStep + 1);
+    nextProblem(difficulty, mode, (lessonIndex + 1) % LESSONS.length, 0);
+  };
 
   return {
     problem,
@@ -284,9 +324,10 @@ export function useGameController() {
     explanation,
     lesson,
     lessonIndex,
+    lessonStep,
     lessonProgress,
     selectLesson,
-    nextProblem: () => nextProblem(difficulty, mode, mode === "lessons" ? (lessonIndex + 1) % LESSONS.length : undefined),
+    nextProblem: next,
     changeDifficulty,
     changeMode,
   };

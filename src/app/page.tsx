@@ -4,7 +4,7 @@ import { HandRow } from "@/components/HandRow";
 import { ResultPanel, shantenLabel } from "@/components/ResultPanel";
 import { StatsPanel } from "@/components/StatsPanel";
 import { SHAPE_LABELS } from "@/components/shapeLabels";
-import { DIFFICULTIES, Mode, useGameController } from "@/hooks/useGameController";
+import { DIFFICULTIES, LESSON_STEPS, Mode, useGameController } from "@/hooks/useGameController";
 import { LESSONS } from "@/lib/lessons";
 
 export default function Home() {
@@ -38,8 +38,11 @@ export default function Home() {
             >
               {LESSONS.map((l, i) => (
                 <option key={l.id} value={i}>
-                  {game.lessonProgress[l.id] ? "✓ " : ""}
+                  {game.lessonProgress[l.id]?.completed ? "✓ " : ""}
                   {i + 1}. {l.title}
+                  {game.lessonProgress[l.id]?.completed
+                    ? ` (${game.lessonProgress[l.id].correct}/${game.lessonProgress[l.id].answered})`
+                    : ""}
                 </option>
               ))}
             </select>
@@ -69,7 +72,8 @@ export default function Home() {
             <p className="mb-1 text-center text-sm text-emerald-100">
               {game.lesson && (
                 <span className="mr-2 rounded bg-amber-300 px-1.5 py-0.5 font-semibold text-amber-950">
-                  Lección {game.lessonIndex + 1}/{LESSONS.length}: {game.lesson.title}
+                  Lección {game.lessonIndex + 1}/{LESSONS.length}: {game.lesson.title} · problema {game.lessonStep + 1}/
+                  {LESSON_STEPS}
                 </span>
               )}
               {game.reviewCategory && (
@@ -97,6 +101,14 @@ export default function Home() {
               category={game.category}
               explanation={game.explanation}
               lesson={game.lesson}
+              lessonStep={game.lessonStep}
+              nextLabel={
+                !game.lesson
+                  ? "Siguiente problema →"
+                  : game.lessonStep + 1 < LESSON_STEPS
+                    ? "Siguiente problema de la lección →"
+                    : "Siguiente lección →"
+              }
               generating={game.generating}
               onNext={game.nextProblem}
             />

@@ -1,5 +1,6 @@
 import { BlockKind, Explanation, tileName } from "@/lib/mahjong";
 import type { Lesson } from "@/lib/lessons";
+import { PRACTICE } from "@/lib/lessonPractice";
 import { TileDisplay } from "./TileDisplay";
 
 const BLOCK_LABELS: Record<BlockKind, string> = {
@@ -15,10 +16,13 @@ const BLOCK_LABELS: Record<BlockKind, string> = {
 interface ExplanationPanelProps {
   explanation: Explanation;
   lesson: Lesson | null;
+  /** 0 = the lesson's worked example; later steps are practice problems. */
+  lessonStep: number;
 }
 
 /** "Why?" section: lesson text (if any), how the hand reads and the engine-derived reasoning. */
-export function ExplanationPanel({ explanation, lesson }: ExplanationPanelProps) {
+export function ExplanationPanel({ explanation, lesson, lessonStep }: ExplanationPanelProps) {
+  const lessonText = lesson ? (lessonStep === 0 ? lesson.explanation : [PRACTICE[lesson.id]?.rule].filter(Boolean)) : [];
   const { reading, optimal, form } = explanation;
   return (
     <section className="w-full space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
@@ -26,8 +30,10 @@ export function ExplanationPanel({ explanation, lesson }: ExplanationPanelProps)
 
       {lesson && (
         <div className="space-y-2 rounded-md bg-amber-50 p-3 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-          <p className="font-semibold">Lección: {lesson.title}</p>
-          {lesson.explanation.map((p, i) => (
+          <p className="font-semibold">
+            {lessonStep === 0 ? "Lección" : "Regla de la lección"}: {lesson.title}
+          </p>
+          {lessonText.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
         </div>

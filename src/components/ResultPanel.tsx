@@ -11,6 +11,9 @@ interface ResultPanelProps {
   category: Shape | null;
   explanation: Explanation | null;
   lesson: Lesson | null;
+  lessonStep: number;
+  /** Label for the next button, e.g. "Siguiente lección →". */
+  nextLabel: string;
   generating: boolean;
   onNext: () => void;
 }
@@ -31,7 +34,7 @@ function TileList({ tiles }: { tiles: Tile[] }) {
   );
 }
 
-export function ResultPanel({ evaluation, chosen, correct, category, explanation, lesson, generating, onNext }: ResultPanelProps) {
+export function ResultPanel({ evaluation, chosen, correct, category, explanation, lesson, lessonStep, nextLabel, generating, onNext }: ResultPanelProps) {
   const best = evaluation.options[0];
   return (
     <section className="w-full space-y-4">
@@ -61,11 +64,11 @@ export function ResultPanel({ evaluation, chosen, correct, category, explanation
           autoFocus
           className="rounded-lg bg-zinc-900 px-5 py-2 font-semibold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
         >
-          {generating ? "Generando…" : lesson ? "Siguiente lección →" : "Siguiente problema →"}
+          {generating ? "Generando…" : nextLabel}
         </button>
       </div>
 
-      {explanation && <ExplanationPanel explanation={explanation} lesson={lesson} />}
+      {explanation && <ExplanationPanel explanation={explanation} lesson={lesson} lessonStep={lessonStep} />}
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
