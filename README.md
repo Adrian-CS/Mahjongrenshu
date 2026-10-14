@@ -92,7 +92,8 @@ Build command `npm run build`, output directory `out` (o
   bloques del concepto en palos y números al azar, sin que se toquen entre sí,
   y solo se usa si el motor confirma que el descarte óptimo es el que enseña la
   lección. Las lecciones no cuentan para marcador, estadísticas ni repaso; el
-  progreso (✓ y aciertos de la última vez) se guarda en el dispositivo. Para
+  progreso (✓ y aciertos de la última vez) se guarda en el dispositivo y se
+  sincroniza en D1 entre dispositivos (gana lo más reciente). Para
   añadir una lección: su ejemplo en `LESSONS` (con cifras en el test) y su
   constructor en `PRACTICE`.
 
