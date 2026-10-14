@@ -80,18 +80,27 @@ export function pickReviewCategory(stats: CategoryStats[], rng: Rng = Math.rando
 
 /**
  * Generates a problem of the given category. Some categories are rare in
- * random hands, so this gives up after `maxAttempts` and returns null.
+ * random hands, so this gives up after `maxAttempts` or one second and returns null.
  */
 export function generateProblemOfCategory(
   category: Shape,
   options: Omit<GeneratorOptions, "accept" | "maxAttempts"> & { maxAttempts?: number } = {},
 ): Problem | null {
+  // Rare categories can take long to find: give up after a time budget.
+  const deadline = Date.now() + 1000;
   try {
     return generateProblem({
       maxAttempts: 3000,
       ...options,
       accept: (p) => {
-        const ev = evaluateHand(problemTiles(p));
+        if (Date.now() > deadline) throw new Error("time budget exhausted");
+        // Cheap pre-check without the tie-break: the final optimal discards are
+        // a subset of these, so the category must already be among their shapes.
+        const tiles = problemTiles(p);
+        const counts = toCounts(tiles);
+        const quick = evaluateHand(tiles, { tiebreak: false });
+        if (!quick.bestDiscards.some((t) => classifyTile(t, counts) === category)) return false;
+        const ev = evaluateHand(tiles);
         return hasClearAnswer(ev) && problemCategory(p, ev) === category;
       },
     });

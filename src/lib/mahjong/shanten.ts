@@ -40,11 +40,15 @@ export function kokushiShanten(counts: Counts): number {
  * achievable (pair, melds) -> max partials table, then the tables are merged.
  * Decompositions are memoised by the group's tile counts.
  */
+// Scratch buffers for merging: standardShanten is called in hot loops.
+const bufA = new Int8Array(10);
+const bufB = new Int8Array(10);
+
 export function standardShanten(counts: Counts): number {
-  let table = groupTable(counts.slice(0, 9), true);
-  table = mergeTables(table, groupTable(counts.slice(9, 18), true));
-  table = mergeTables(table, groupTable(counts.slice(18, 27), true));
-  table = mergeTables(table, groupTable(counts.slice(27, 34), false));
+  mergeTables(groupTable(counts, 0, 9, true), groupTable(counts, 9, 9, true), bufA);
+  mergeTables(bufA, groupTable(counts, 18, 9, true), bufB);
+  mergeTables(bufB, groupTable(counts, 27, 7, false), bufA);
+  const table = bufA;
 
   let best = 8;
   for (let p = 0; p <= 1; p++) {
@@ -73,8 +77,8 @@ function emptyTable(): Table {
   return new Int8Array(TABLE_SIZE).fill(-1);
 }
 
-function mergeTables(a: Table, b: Table): Table {
-  const out = emptyTable();
+function mergeTables(a: Table, b: Table, out: Table = emptyTable()): Table {
+  out.fill(-1);
   for (let pa = 0; pa <= 1; pa++) {
     for (let ma = 0; ma <= MAX_MELDS; ma++) {
       const ta = a[pa * TABLE_STRIDE + ma];
@@ -93,9 +97,19 @@ function mergeTables(a: Table, b: Table): Table {
 }
 
 const cache = new Map<string, Table>();
+/** Hot-path cache by a numeric key (counts in base 5), avoiding slices and string keys. */
+const groupCache = new Map<number, Table>();
 
-function groupTable(group: number[], isSuit: boolean): Table {
-  return decompose(group, 0, isSuit);
+function groupTable(counts: Counts, start: number, length: number, isSuit: boolean): Table {
+  let key = 0;
+  for (let i = start; i < start + length; i++) key = key * 5 + counts[i];
+  key = key * 2 + (isSuit ? 1 : 0);
+  let table = groupCache.get(key);
+  if (!table) {
+    table = decompose(counts.slice(start, start + length), 0, isSuit);
+    groupCache.set(key, table);
+  }
+  return table;
 }
 
 /**

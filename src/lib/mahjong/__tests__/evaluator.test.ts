@@ -5,7 +5,7 @@ import { calculateShanten } from "../shanten";
 import { parseHand, tileToString, toCounts } from "../tiles";
 
 const t = (s: string) => parseHand(s)[0];
-const names = (tiles: number[]) => tiles.map(tileToString);
+const names = (tiles: (number | { tile: number })[]) => tiles.map((x) => tileToString(typeof x === "number" ? x : x.tile));
 
 describe("calculateUkeire", () => {
   it("counts a ryanmen wait as 8 tiles", () => {
@@ -68,5 +68,24 @@ describe("evaluateHand", () => {
       const tiles = [...p.hand, p.draw];
       expect(evaluateHand(tiles).shanten).toBe(calculateShanten(toCounts(tiles)));
     }
+  });
+
+  it("breaks ukeire ties by improvement tiles: penchan goes before kanchan", () => {
+    // 123m 789p 11z + ryanmen 6-7m, kanchan 1-3s, penchan 8-9s: both partials wait 4 tiles,
+    // but the kanchan can turn into a ryanmen (drawing 4s) and the penchan can't. Cut its 9s:
+    // the 8s left behind can still grow into a ryanmen (6s, 7s), a lone 9s less so.
+    const ev = evaluateHand(parseHand("123m67m789p11z13s89s"));
+    expect(names(ev.bestDiscards)).toEqual(["9s"]);
+    const pen = findOption(ev, t("9s"));
+    const kan = findOption(ev, t("1s"));
+    expect(pen.ukeire.total).toBe(kan.ukeire.total);
+    expect(pen.improvement!.total).toBeGreaterThan(kan.improvement!.total);
+    expect(names(pen.improvement!.tiles)).toContain("4s");
+  });
+
+  it("can skip the tie-break", () => {
+    const ev = evaluateHand(parseHand("123m67m789p11z13s89s"), { tiebreak: false });
+    expect(names(ev.bestDiscards).sort()).toEqual(["1s", "3s", "8s", "9s"]);
+    expect(ev.options.every((o) => o.improvement === undefined)).toBe(true);
   });
 });

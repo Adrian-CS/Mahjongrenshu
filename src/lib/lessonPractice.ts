@@ -101,15 +101,19 @@ export const PRACTICE: Record<string, Practice> = {
     },
   },
   "kanchan-vs-penchan": {
-    rule: "Cuando sobra una espera, mira qué tiles pide cada una. Si el penchan pide un tile que otra espera ya pide (1-2 y 4-5 esperan los dos el 3), es el que sobra: cortarlo no te cuesta ningún tile.",
+    rule: "Kanchan y penchan esperan un solo tipo de tile, pero el kanchan puede mejorar a ryanmen (3-5 robando un 2 o un 6) y el penchan no. Si sobra una espera, sale el penchan. Y si su tile ya lo espera otro bloque (1-2 y 4-5 piden el 3), cortarlo no cuesta nada.",
     shanten: 1,
     build: (rng) => {
-      // Penchan whose wait overlaps a ryanmen in the same suit: 12+45 or 89+56.
       const s = suit(rng);
       const low = rng() < 0.5;
       const pen = low ? [t(s, 1), t(s, 2)] : [t(s, 8), t(s, 9)];
-      const ryan = low ? [t(s, 4), t(s, 5)] : [t(s, 5), t(s, 6)];
-      return { groups: [sequence(rng), sequence(rng), pair(rng), [...pen, ...ryan], kanchan(rng)], target: pen };
+      if (rng() < 0.5) {
+        // Penchan whose wait overlaps a ryanmen in the same suit: 12+45 or 89+56.
+        const ryan = low ? [t(s, 4), t(s, 5)] : [t(s, 5), t(s, 6)];
+        return { groups: [sequence(rng), sequence(rng), pair(rng), [...pen, ...ryan], kanchan(rng)], target: pen };
+      }
+      // Independent blocks: equal acceptance, the kanchan's improvement decides.
+      return { groups: [sequence(rng), sequence(rng), pair(rng), ryanmen(rng), kanchan(rng), pen], target: pen };
     },
   },
   "ryanmen-vs-kanchan": {

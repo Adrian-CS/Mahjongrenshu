@@ -13,9 +13,11 @@ describe("review", () => {
 
   it("prefers the most basic shape when optimal discards tie", () => {
     // Cutting 9s (from 789s) and 7z (isolated honor) tie; the lesson is the honor.
+    // (Tied on ukeire; the improvement tie-break is off to test the rule itself.)
     const problem = { hand: parseHand("1179m45p223789s7z"), draw: parseHand("9s")[0] };
-    expect(evaluateHand(problemTiles(problem)).bestDiscards.map(tileToString)).toEqual(["9s", "7z"]);
-    expect(problemCategory(problem)).toBe("isolated-honor");
+    const ev = evaluateHand(problemTiles(problem), { tiebreak: false });
+    expect(ev.bestDiscards.map(tileToString)).toEqual(["9s", "7z"]);
+    expect(problemCategory(problem, ev)).toBe("isolated-honor");
   });
 
   it("weights categories by smoothed error rate", () => {
@@ -48,7 +50,7 @@ describe("review", () => {
     expect(hasClearAnswer(ev("234m789p111z45s79s5z"))).toBe(true); // 5z only
     expect(hasClearAnswer(ev("234m567p11z45s79p1s2s"))).toBe(true); // 1s/2s penchan
     expect(hasClearAnswer(ev("1133m5577p99s1z2z3z4z"))).toBe(false); // four honors tie
-    expect(hasClearAnswer(ev("1179m45p223789s7z9s"))).toBe(false); // 9s and 7z: unrelated
+    expect(hasClearAnswer(ev("234m567p11z12s46p77z"))).toBe(false); // 1z and 7z: two separate pairs
   });
 
   it("only generates problems with a clear answer", () => {

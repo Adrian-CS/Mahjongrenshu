@@ -46,6 +46,11 @@ haya servidor.
   API RPC por strings. El motor propio (~150 líneas) se valida en los tests
   contra [`syanten`](https://www.npmjs.com/package/syanten) (MIT, solo
   devDependency) en miles de manos aleatorias y de un solo palo.
+- **Desempate por calidad.** Si varios descartes dejan el mismo shanten y la
+  misma aceptación, gana el que deja más *tiles de mejora*: los que, sin
+  avanzar la mano, la cambian a una forma que acepta más (un kanchan 3-5 que
+  roba un 6 pasa a ryanmen 5-6; un penchan no puede). Solo se calcula para los
+  empatados arriba, porque es caro.
 - **14 tiles, no 13.** Un nanikiru necesita 13 + el tile robado para que haya
   algo que descartar; la mano se muestra ordenada con el tsumo aparte.
 - **Ukeire** = copias no visibles (4 − copias en tus 14 tiles) de cada tile que

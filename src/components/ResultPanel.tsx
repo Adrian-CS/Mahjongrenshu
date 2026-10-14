@@ -97,6 +97,11 @@ export function ResultPanel({ evaluation, chosen, correct, category, explanation
                   <td className="py-1 pr-3 whitespace-nowrap">{shantenLabel(o.shanten)}</td>
                   <td className="py-1 pr-3 font-semibold tabular-nums">
                     {o.ukeire.total} <span className="font-normal text-zinc-500">({o.ukeire.tiles.length} tipos)</span>
+                    {o.improvement && (
+                      <span className="block text-xs font-normal text-zinc-500" title="Tiles que mejoran la forma sin avanzar la mano">
+                        +{o.improvement.total} de mejora
+                      </span>
+                    )}
                   </td>
                   <td className="py-1">
                     <TileList tiles={o.ukeire.tiles.map((u) => u.tile)} />

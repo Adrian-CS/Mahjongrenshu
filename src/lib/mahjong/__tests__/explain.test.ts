@@ -59,4 +59,15 @@ describe("explain", () => {
       }
     }
   });
+
+  it("explains when improvement tiles decide between equal acceptance", () => {
+    const p = problemOf("123m67m789p11z13s89s");
+    const ev = evaluateHand(problemTiles(p));
+    const wrong = explain(p, ev, t("1s"));
+    expect(wrong.correct).toBe(false);
+    expect(wrong.points[0]).toContain("decide la calidad de la forma");
+    const right = explain(p, ev, t("9s"));
+    expect(right.correct).toBe(true);
+    expect(right.points.join(" ")).toContain("tiles de mejora");
+  });
 });

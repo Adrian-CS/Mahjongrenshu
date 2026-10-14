@@ -122,13 +122,31 @@ export function explain(problem: Problem, evaluation: HandEvaluation, chosenTile
       `Cortar ${cho} empeora la mano: pasas de ${SHANTEN_TEXT(optimal.shanten)} a ${SHANTEN_TEXT(chosen.shanten)}.` +
         (block && block.kind !== "floating" ? ` El ${cho} forma parte de ${BLOCK_TEXT[block.kind]} que la mano necesita.` : ""),
     );
+  } else if (chosen.ukeire.total === optimal.ukeire.total) {
+    // Same acceptance: the improvement tie-break decided.
+    const optImp = optimal.improvement?.tiles.map((u) => u.tile) ?? [];
+    points.push(
+      `Los dos descartes aceptan ${optimal.ukeire.total} tiles, así que decide la calidad de la forma: cortando ${opt} quedan ${optimal.improvement?.total ?? 0} tiles que, sin avanzar la mano, la mejoran a una forma que acepta más (${list(optImp) || "ninguno"}). Cortando ${cho}, solo ${chosen.improvement?.total ?? 0}.`,
+    );
   } else {
     points.push(
       `Los dos descartes dejan la mano en ${SHANTEN_TEXT(optimal.shanten)}, pero cortando ${opt} aceptas ${optimal.ukeire.total} tiles y cortando ${cho} solo ${chosen.ukeire.total}.`,
     );
   }
 
-  if (!correct && onlyOptimal.length > 0) {
+  if (correct) {
+    // Mention when other discards accepted the same and improvement tiles decided.
+    const beaten = evaluation.options.filter(
+      (o) => o.improvement && !evaluation.bestDiscards.includes(o.discard) && o.ukeire.total === chosen.ukeire.total,
+    );
+    if (beaten.length > 0 && chosen.improvement) {
+      points.push(
+        `${list(beaten.map((o) => o.discard))} también aceptaba${beaten.length > 1 ? "n" : ""} ${chosen.ukeire.total} tiles, pero tu descarte deja más tiles de mejora (${chosen.improvement.total} frente a ${Math.max(...beaten.map((o) => o.improvement!.total))}): robándolos, la mano pasa a una forma que acepta más.`,
+      );
+    }
+  }
+
+  if (!correct && onlyOptimal.length > 0 && optimal.ukeire.total > chosen.ukeire.total) {
     points.push(
       `Lo que pierdes con tu descarte: con ${opt} fuera, también mejoras robando ${list(onlyOptimal)} (${copies(optimal, onlyOptimal)} tiles).` +
         (onlyChosen.length > 0
