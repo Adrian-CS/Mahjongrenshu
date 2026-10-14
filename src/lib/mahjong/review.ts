@@ -1,7 +1,7 @@
 import { HandEvaluation, evaluateHand } from "./evaluator";
 import { GeneratorOptions, Problem, Rng, generateProblem } from "./generator";
 import { SHAPES, Shape, classifyTile } from "./shapes";
-import { Tile, toCounts } from "./tiles";
+import { Tile, isHonor, toCounts } from "./tiles";
 
 /**
  * A problem's category is the shape its optimal discard is cut from
@@ -19,6 +19,29 @@ export function representativeDiscard(problem: Problem, evaluation: HandEvaluati
   const counts = toCounts(problemTiles(problem));
   const rank = (t: Tile) => SHAPES.indexOf(classifyTile(t, counts));
   return evaluation.bestDiscards.reduce((a, b) => (rank(b) < rank(a) ? b : a));
+}
+
+/**
+ * A problem has a clear answer when one discard is best, or two tied discards
+ * come from the same block (1s/2s of a penchan, 7p/9p of a kanchan): either
+ * way there is a single decision to make, not a coin flip between unrelated tiles.
+ */
+export function hasClearAnswer(evaluation: HandEvaluation): boolean {
+  const best = evaluation.bestDiscards;
+  if (best.length === 1) return true;
+  if (best.length !== 2) return false;
+  const [a, b] = best;
+  const sameSuit = !isHonor(a) && Math.floor(a / 9) === Math.floor(b / 9);
+  return sameSuit && Math.abs(a - b) <= 2;
+}
+
+/** Generates a problem with a clear answer (see hasClearAnswer). */
+export function generateClearProblem(options: GeneratorOptions = {}): Problem {
+  const { accept } = options;
+  return generateProblem({
+    ...options,
+    accept: (p) => (!accept || accept(p)) && hasClearAnswer(evaluateHand(problemTiles(p))),
+  });
 }
 
 export function problemTiles(problem: Problem) {
@@ -65,9 +88,12 @@ export function generateProblemOfCategory(
 ): Problem | null {
   try {
     return generateProblem({
-      maxAttempts: 1500,
+      maxAttempts: 3000,
       ...options,
-      accept: (p) => problemCategory(p) === category,
+      accept: (p) => {
+        const ev = evaluateHand(problemTiles(p));
+        return hasClearAnswer(ev) && problemCategory(p, ev) === category;
+      },
     });
   } catch {
     return null;

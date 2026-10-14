@@ -38,6 +38,16 @@ describe("lessons", () => {
     ["ryanmen-vs-shanpon", "6s", 4, 0],
     ["nobetan", "7z", 9, 0],
     ["chiitoitsu", "4z", 9, 1],
+    ["keep-penchan", "9s", 63, 2],
+    ["keep-penchan", "1s", 72, 3],
+    ["ryankan-246", "9p", 16, 1],
+    ["ryankan-246", "2m", 12, 1],
+    ["attached-tile", "9m", 50, 1],
+    ["attached-tile", "8p", 37, 1],
+    ["sanmenchan", "9m", 11, 0],
+    ["shape-3334", "1z", 11, 0],
+    ["shape-1113", "4z", 7, 0],
+    ["shape-1113", "3s", 3, 0],
   ] as const)("%s: cutting %s gives %i tiles at %i-shanten", (id, discard, total, shanten) => {
     const o = ukeire(id, discard);
     expect(o.ukeire.total).toBe(total);
@@ -45,11 +55,18 @@ describe("lessons", () => {
   });
 
   it("quotes the right waits", () => {
+    const names = (id: string, d: string) => ukeire(id, d).ukeire.tiles.map((u) => tileToString(u.tile));
     expect(ukeire("tenpai-wait", "4s").ukeire.tiles.map((u) => tileToString(u.tile))).toEqual(["6s"]);
     expect(ukeire("nobetan", "7z").ukeire.tiles.map((u) => tileToString(u.tile))).toEqual(["3s", "6s", "9s"]);
     expect(ukeire("ryanmen-vs-shanpon", "5s").ukeire.tiles.map((u) => tileToString(u.tile))).toEqual(["4s", "7s"]);
+    expect(names("sanmenchan", "9m")).toEqual(["1s", "4s", "7s"]);
+    expect(names("shape-3334", "1z")).toEqual(["2s", "4s", "5s"]);
+    expect(names("shape-1113", "4z")).toEqual(["2s", "3s"]);
+    expect(names("ryankan-246", "9p")).toEqual(["3m", "5m", "3s", "6s"]);
+    expect(names("attached-tile", "9m").filter((t) => t.endsWith("p"))).toEqual(["3p", "4p", "5p", "6p", "7p", "8p", "9p"]);
+    // The penchan is needed: cutting from it goes back a step.
+    expect(ukeire("keep-penchan", "6s").ukeire.total).toBeLessThan(ukeire("keep-penchan", "9s").ukeire.total);
     expect(ukeire("isolated-honor", "5z").ukeire.tiles.map((u) => tileToString(u.tile))).toEqual(["3s", "4s", "5s", "6s", "7s", "8s", "9s"]);
-    const names = (id: string, d: string) => ukeire(id, d).ukeire.tiles.map((u) => tileToString(u.tile));
     expect(names("kuttsuki", "9p")).toEqual(expect.arrayContaining(["4p", "5p", "6p", "7p", "8p"]));
     expect(names("kuttsuki", "6p")).toEqual(expect.arrayContaining(["7p", "8p", "9p"]));
     expect(ukeire("kuttsuki", "6p").ukeire.total).toBeLessThan(ukeire("kuttsuki", "9p").ukeire.total);

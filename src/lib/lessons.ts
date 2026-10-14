@@ -31,6 +31,18 @@ export const LESSONS: Lesson[] = [
     ],
   },
   {
+    id: "keep-penchan",
+    title: "Faltan bloques: el penchan se queda",
+    hand: "123m6m4p789p11z12s6s",
+    draw: "9s",
+    best: ["9s"],
+    explanation: [
+      "Cuenta bloques: dos grupos (123m y 789p), la pareja de Este y el penchan 1-2s. Son cuatro y una mano usa cinco, así que te falta uno, y saldrá de un tile suelto: 6m, 4p, 6s o 9s.",
+      "Aunque el penchan es la espera más débil, aquí es un bloque que necesitas: romperlo te lleva a 3-shanten.",
+      "Corta el suelto que menos conecta: el 9s, que solo forma bloque con 7s y 8s. Los tiles centrales (6m, 4p, 6s) conectan hacia los dos lados.",
+    ],
+  },
+  {
     id: "kanchan-vs-penchan",
     title: "Kanchan contra penchan",
     hand: "234m567p11z45s79p1s",
@@ -67,6 +79,18 @@ export const LESSONS: Lesson[] = [
     ],
   },
   {
+    id: "ryankan-246",
+    title: "Ryankan contra tile suelto",
+    hand: "246m567p789s11z45s",
+    draw: "9p",
+    best: ["9p"],
+    explanation: [
+      "2-4-6m es un ryankan: espera el 3m (2-3-4) o el 5m (4-5-6). Dos tipos de tile, igual que un ryanmen.",
+      "La mano ya tiene sus cinco bloques: 567p, 789s, el ryankan, el 4-5s y la pareja. El 9p, pegado al 567p, no forma ninguno nuevo.",
+      "Corta el 9p y aceptas 3m, 5m, 3s y 6s: 16 tiles. Si rompes el ryankan cortando el 2m o el 6m, te queda un kanchan y bajas a 12.",
+    ],
+  },
+  {
     id: "kuttsuki",
     title: "Tiles sueltos: quédate con los centrales",
     hand: "234m567p789s11z4m6p",
@@ -76,6 +100,18 @@ export const LESSONS: Lesson[] = [
       "Tienes tres grupos y la pareja: solo te falta el cuarto grupo, y saldrá de un tile suelto (4m, 6p o 9p).",
       "Cada tile suelto mejora la mano sobre todo con los tiles que forman bloque con él. El 6p conecta directamente con 4p, 5p, 6p, 7p y 8p; el 9p, solo con 7p, 8p y 9p. El 4m, pegado al 234m, es el más valioso de los tres.",
       "Corta el más pobre: el 9p. Los terminales sueltos se cortan antes que los tiles del centro.",
+    ],
+  },
+  {
+    id: "attached-tile",
+    title: "Un tile pegado a un grupo vale más",
+    hand: "234m567p11z2345s8p",
+    draw: "9m",
+    best: ["9m"],
+    explanation: [
+      "Tienes 234m, 567p, la pareja de Este y 2-3-4-5s, que funciona como grupo más tile extra o como dos esperas. Sobran dos tiles sueltos: el 9m y el 8p.",
+      "El 8p está pegado a tu 567p: juntos forman 5678p, que puede convertirse en grupo más espera robando muchos tiles distintos (del 3p al 9p).",
+      "El 9m está solo y en el borde. Córtalo: aceptas 50 tiles. Cortando el 8p te quedarías en 37.",
     ],
   },
   {
@@ -112,6 +148,42 @@ export const LESSONS: Lesson[] = [
       "Corta el Chun y quédate con 3-4-5-6s: estás en tenpai.",
       "3456s espera el 3s (3 + 456) o el 6s (345 + 6): es un nobetan. Además, junto a tu 789s, el 9s también completa la mano (345 + 678 + 99).",
       "Tres tipos de espera, 9 tiles. Las formas de cuatro tiles conectados suelen esperar más de lo que parece.",
+    ],
+  },
+  {
+    id: "sanmenchan",
+    title: "Sanmenchan: espera a tres tiles",
+    hand: "234m567p11z23456s",
+    draw: "9m",
+    best: ["9m"],
+    explanation: [
+      "Corta el 9m y quedas en tenpai con 2-3-4-5-6s.",
+      "Esa forma se lee como 234 + 56 (espera 4s o 7s) o como 23 + 456 (espera 1s o 4s). Juntas esperan 1s, 4s y 7s: es un sanmenchan.",
+      "Ya tienes un 4s en la mano, así que quedan 4 + 3 + 4 = 11 tiles. Es la mejor espera habitual del juego.",
+    ],
+  },
+  {
+    id: "shape-3334",
+    title: "La forma 3-3-3-4",
+    hand: "123m456p789s3334s",
+    draw: "1z",
+    best: ["1z"],
+    explanation: [
+      "Corta el Este y quedas en tenpai con 3-3-3-4s.",
+      "Se puede leer como 333 + 4 (esperas otro 4s para la pareja) o como 33 + 34 (esperas 2s o 5s para la secuencia).",
+      "Esperas 2s, 4s y 5s: 4 + 3 + 4 = 11 tiles. Las formas con tres tiles iguales y uno al lado esperan más de lo que parece.",
+    ],
+  },
+  {
+    id: "shape-1113",
+    title: "La forma 1-1-1-3",
+    hand: "123m456p789s1113s",
+    draw: "4z",
+    best: ["4z"],
+    explanation: [
+      "Corta el Norte y quedas en tenpai con 1-1-1-3s.",
+      "Se lee como 111 + 3 (esperas otro 3s para la pareja) o como 11 + 13 (esperas el 2s en kanchan).",
+      "Esperas 2s y 3s: 4 + 3 = 7 tiles. Si cortaras el 3s te quedarías esperando solo el Norte: 3 tiles.",
     ],
   },
   {

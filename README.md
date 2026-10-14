@@ -75,7 +75,12 @@ Build command `npm run build`, output directory `out` (o
   lee la mano tras el descarte óptimo (secuencias, parejas, esperas, sueltos),
   qué tiles pierdes con tu descarte, el recuento de bloques cuando sobra uno y
   el principio de eficiencia que aplica. Todo sale del motor.
-- **Modo Lecciones:** problemas escogidos a mano por concepto con explicación
+- **Respuesta clara:** los problemas generados (normal y repaso) solo se
+  aceptan si el descarte óptimo es único o si los empatados salen del mismo
+  bloque (1s/2s de un penchan). Ver `hasClearAnswer` en `review.ts`.
+- **Retomar donde lo dejaste:** modo, dificultad, lección, marcador y problema
+  sin responder se guardan en el dispositivo (`localStorage`).
+- **Modo Lecciones (15):** problemas escogidos a mano por concepto con explicación
   escrita. Los tests comprueban cada lección contra el motor (descarte óptimo y
   cifras citadas en el texto). No cuentan para marcador, estadísticas ni
   repaso; el progreso (✓) se guarda en el dispositivo. Para añadir una, sigue

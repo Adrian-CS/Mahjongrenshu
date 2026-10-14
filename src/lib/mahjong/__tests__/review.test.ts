@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "../generator";
 import { evaluateHand } from "../evaluator";
-import { CategoryStats, generateProblemOfCategory, pickReviewCategory, problemCategory, problemTiles, weakness } from "../review";
+import { CategoryStats, generateClearProblem, generateProblemOfCategory, hasClearAnswer, pickReviewCategory, problemCategory, problemTiles, weakness } from "../review";
 import { parseHand, tileToString } from "../tiles";
 
 describe("review", () => {
@@ -40,6 +40,22 @@ describe("review", () => {
       const p = generateProblemOfCategory(category, { rng, minShanten: 1, maxShanten: 3 });
       expect(p).not.toBeNull();
       expect(problemCategory(p!)).toBe(category);
+    }
+  });
+
+  it("accepts a unique best discard or a tie inside one block", () => {
+    const ev = (n: string) => evaluateHand(parseHand(n));
+    expect(hasClearAnswer(ev("234m789p111z45s79s5z"))).toBe(true); // 5z only
+    expect(hasClearAnswer(ev("234m567p11z45s79p1s2s"))).toBe(true); // 1s/2s penchan
+    expect(hasClearAnswer(ev("1133m5577p99s1z2z3z4z"))).toBe(false); // four honors tie
+    expect(hasClearAnswer(ev("1179m45p223789s7z9s"))).toBe(false); // 9s and 7z: unrelated
+  });
+
+  it("only generates problems with a clear answer", () => {
+    const rng = seededRng(13);
+    for (let i = 0; i < 30; i++) {
+      const p = generateClearProblem({ rng, minShanten: 1, maxShanten: 2 });
+      expect(hasClearAnswer(evaluateHand(problemTiles(p)))).toBe(true);
     }
   });
 });

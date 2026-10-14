@@ -13,7 +13,7 @@ import {
   explain,
   findOption,
   formatHand,
-  generateProblem,
+  generateClearProblem,
   generateProblemOfCategory,
   isSameValue,
   pickReviewCategory,
@@ -58,6 +58,40 @@ function storeLessonProgress(progress: LessonProgress) {
   }
 }
 
+/** Where the player left off, restored when the app is reopened. Kept per device. */
+interface SavedSession {
+  mode: Mode;
+  difficultyId: string;
+  /** By id, so adding or reordering lessons doesn't move the player. */
+  lessonId: string;
+  /** Current problem, if it was still unanswered. */
+  problem: Problem | null;
+  reviewCategory: Shape | null;
+  answered: boolean;
+  score: Score;
+}
+const SESSION_KEY = "nanikiru:session";
+
+function loadSession(): SavedSession | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) ?? "null") as SavedSession | null;
+    if (!s || !["normal", "review", "lessons"].includes(s.mode)) return null;
+    // Reject a corrupted or outdated saved hand rather than crash on it.
+    if (s.problem) evaluateHand(problemTiles(s.problem));
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+function storeSession(session: SavedSession) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // Storage unavailable: the app simply starts fresh next time.
+  }
+}
+
 export interface Score {
   correct: number;
   total: number;
@@ -91,6 +125,8 @@ export function useGameController() {
   const [statsError, setStatsError] = useState<string | null>(null);
   const [lessonIndex, setLessonIndex] = useState(0);
   const [lessonProgress, setLessonProgress] = useState<LessonProgress>({});
+  // Don't persist anything until the saved session has been restored.
+  const [restored, setRestored] = useState(false);
 
   // Latest stats for generation without re-creating callbacks on every answer.
   const statsRef = useRef(stats);
@@ -114,7 +150,7 @@ export function useGameController() {
         const range = { minShanten: d.minShanten, maxShanten: d.maxShanten };
         const category = m === "review" ? pickReviewCategory(statsRef.current.categories) : null;
         const reviewProblem = category ? generateProblemOfCategory(category, range) : null;
-        setProblem(reviewProblem ?? generateProblem(range));
+        setProblem(reviewProblem ?? generateClearProblem(range));
         setReviewCategory(reviewProblem ? category : null);
         setChosenIndex(null);
         setGenerating(false);
@@ -124,9 +160,24 @@ export function useGameController() {
   );
 
   useEffect(() => {
-    // Random generation must not run during SSR/static export.
+    // Restore where the player left off. Random generation must not run during SSR/static export.
+    const saved = loadSession();
+    const d = DIFFICULTIES.find((x) => x.id === saved?.difficultyId) ?? DIFFICULTIES[1];
+    const m = saved?.mode ?? "normal";
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    nextProblem();
+    setDifficulty(d);
+    setMode(m);
+    if (saved) setScore(saved.score);
+    if (m === "lessons") {
+      const idx = Math.max(LESSONS.findIndex((l) => l.id === saved?.lessonId), 0);
+      nextProblem(d, m, saved?.answered ? (idx + 1) % LESSONS.length : idx);
+    } else if (saved?.problem && !saved.answered) {
+      setProblem(saved.problem);
+      setReviewCategory(saved.reviewCategory);
+    } else {
+      nextProblem(d, m);
+    }
+    setRestored(true);
     setLessonProgress(loadLessonProgress());
     void flushAttempts();
     fetchStats().then((r) => {
@@ -139,6 +190,19 @@ export function useGameController() {
     return () => window.removeEventListener("online", onOnline);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!restored) return;
+    storeSession({
+      mode,
+      difficultyId: difficulty.id,
+      lessonId: LESSONS[lessonIndex].id,
+      problem: mode === "lessons" ? null : problem,
+      reviewCategory,
+      answered: chosenIndex !== null,
+      score,
+    });
+  }, [restored, mode, difficulty, lessonIndex, problem, reviewCategory, chosenIndex, score]);
 
   const evaluation: HandEvaluation | null = useMemo(() => (problem ? evaluateHand(problemTiles(problem)) : null), [problem]);
   const category = useMemo(() => (problem && evaluation ? problemCategory(problem, evaluation) : null), [problem, evaluation]);
