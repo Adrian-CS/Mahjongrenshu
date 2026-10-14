@@ -8,7 +8,8 @@ import { TileDisplay } from "./TileDisplay";
 
 interface ResultPanelProps {
   evaluation: HandEvaluation;
-  chosen: DiscardOption;
+  /** Null when the player ran out of time (timed mode). */
+  chosen: DiscardOption | null;
   correct: boolean;
   category: Shape | null;
   explanation: Explanation | null;
@@ -42,11 +43,13 @@ export function ResultPanel({ evaluation, chosen, correct, category, explanation
         }`}
       >
         <div>
-          <p className="text-lg font-semibold short:text-base">{correct ? "¡Correcto!" : "Incorrecto"}</p>
-          <p className="mt-1 flex flex-wrap items-center gap-2">
-            Tu descarte: <TileList tiles={[chosen.discard]} /> → {shantenLabel(chosen.shanten)}, ukeire{" "}
-            <strong>{chosen.ukeire.total}</strong>
-          </p>
+          <p className="text-lg font-semibold short:text-base">{!chosen ? "¡Se acabó el tiempo!" : correct ? "¡Correcto!" : "Incorrecto"}</p>
+          {chosen && (
+            <p className="mt-1 flex flex-wrap items-center gap-2">
+              Tu descarte: <TileList tiles={[chosen.discard]} /> → {shantenLabel(chosen.shanten)}, ukeire{" "}
+              <strong>{chosen.ukeire.total}</strong>
+            </p>
+          )}
           {!correct && (
             <p className="mt-1 flex flex-wrap items-center gap-2">
               Óptimo: <TileList tiles={evaluation.bestDiscards} /> → {shantenLabel(best.shanten)}, ukeire{" "}
@@ -68,7 +71,7 @@ export function ResultPanel({ evaluation, chosen, correct, category, explanation
 
       {explanation && <ExplanationPanel explanation={explanation} lesson={lesson} lessonStep={lessonStep} />}
 
-      <UkeireTable evaluation={evaluation} chosen={chosen.discard} />
+      <UkeireTable evaluation={evaluation} chosen={chosen?.discard ?? null} />
     </section>
   );
 }

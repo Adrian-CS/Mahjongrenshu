@@ -5,7 +5,8 @@ import { HandRow } from "@/components/HandRow";
 import { ResultPanel, shantenLabel } from "@/components/ResultPanel";
 import { StatsPanel } from "@/components/StatsPanel";
 import { SHAPE_LABELS } from "@/components/shapeLabels";
-import { DIFFICULTIES, LESSON_STEPS, Mode, useGameController } from "@/hooks/useGameController";
+import { DIFFICULTIES, LESSON_STEPS, Mode, TIME_LIMITS, useGameController } from "@/hooks/useGameController";
+import { TimerBar } from "@/components/TimerBar";
 import { LESSONS } from "@/lib/lessons";
 
 export default function Home() {
@@ -29,6 +30,7 @@ export default function Home() {
             <option value="normal">Modo normal</option>
             <option value="review">Repaso de fallos</option>
             <option value="lessons">Lecciones</option>
+            <option value="timed">Contrarreloj</option>
             <option value="analyze">Analizar mi mano</option>
           </select>
           {game.mode === "lessons" ? (
@@ -62,6 +64,20 @@ export default function Home() {
               ))}
             </select>
           )}
+          {game.mode === "timed" && (
+            <select
+              aria-label="Tiempo por mano"
+              value={game.timeLimit}
+              onChange={(e) => game.changeTimeLimit(Number(e.target.value))}
+              className="rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700"
+            >
+              {TIME_LIMITS.map((s) => (
+                <option key={s} value={s}>
+                  {s} s por mano
+                </option>
+              ))}
+            </select>
+          )}
           <span className="tabular-nums" title="Aciertos / intentos · racha">
             {score.correct}/{score.total} · racha {score.streak}
           </span>
@@ -88,20 +104,26 @@ export default function Home() {
               {game.mode === "review" && !game.reviewCategory && <span className="mr-2">Sin fallos que repasar ·</span>}
               Mano: {shantenLabel(evaluation.shanten)} tras el mejor descarte · último tile a la derecha (tsumo)
             </p>
+            {game.deadline !== null && !game.timedOut && game.chosenIndex === null && (
+              <div className="mb-2">
+                <TimerBar deadline={game.deadline} seconds={game.timeLimit} />
+              </div>
+            )}
             <HandRow
               hand={problem.hand}
               draw={problem.draw}
               chosenIndex={game.chosenIndex}
+              revealed={game.timedOut}
               bestDiscards={evaluation.bestDiscards}
               onDiscard={game.discard}
             />
           </div>
 
-          {chosen && correct !== null ? (
+          {(chosen && correct !== null) || game.timedOut ? (
             <ResultPanel
               evaluation={evaluation}
               chosen={chosen}
-              correct={correct}
+              correct={correct ?? false}
               category={game.category}
               explanation={game.explanation}
               lesson={game.lesson}

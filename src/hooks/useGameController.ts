@@ -20,6 +20,7 @@ import {
   pickReviewCategory,
   problemCategory,
   problemTiles,
+  representativeDiscard,
   tileToString,
   toCounts,
 } from "@/lib/mahjong";
@@ -37,7 +38,10 @@ export const DIFFICULTIES: Difficulty[] = [
   { id: "hard", label: "Difícil (2–3 shanten)", minShanten: 2, maxShanten: 3 },
 ];
 
-export type Mode = "normal" | "review" | "lessons" | "analyze";
+export type Mode = "normal" | "review" | "lessons" | "analyze" | "timed";
+
+/** Seconds per hand in timed mode. */
+export const TIME_LIMITS = [5, 10, 20];
 
 /** Practice problems after each lesson's worked example. */
 export const PRACTICE_PER_LESSON = 5;
@@ -73,6 +77,7 @@ function storeLessonProgress(progress: LessonProgress) {
 interface SavedSession {
   mode: Mode;
   difficultyId: string;
+  timeLimit?: number;
   /** By id, so adding or reordering lessons doesn't move the player. */
   lessonId: string;
   lessonStep: number;
@@ -87,7 +92,7 @@ const SESSION_KEY = "nanikiru:session";
 function loadSession(): SavedSession | null {
   try {
     const s = JSON.parse(localStorage.getItem(SESSION_KEY) ?? "null") as SavedSession | null;
-    if (!s || !["normal", "review", "lessons", "analyze"].includes(s.mode)) return null;
+    if (!s || !["normal", "review", "lessons", "analyze", "timed"].includes(s.mode)) return null;
     // Reject a corrupted or outdated saved hand rather than crash on it.
     if (s.problem) evaluateHand(problemTiles(s.problem));
     return s;
@@ -130,6 +135,10 @@ export function useGameController() {
   /** Category being reviewed for the current problem (review mode only). */
   const [reviewCategory, setReviewCategory] = useState<Shape | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [timeLimit, setTimeLimit] = useState(TIME_LIMITS[1]);
+  /** Timed mode: when the current hand runs out of time (ms epoch), or null. */
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
   const [chosenIndex, setChosenIndex] = useState<number | null>(null);
   const [score, setScore] = useState<Score>({ correct: 0, total: 0, streak: 0 });
   const [stats, setStats] = useState<Stats>({ categories: [], overall: { total: 0, correct: 0 } });
@@ -153,6 +162,7 @@ export function useGameController() {
       if (m === "analyze") {
         setProblem(null);
         setChosenIndex(null);
+        setTimedOut(false);
         return;
       }
       if (m === "lessons") {
@@ -164,6 +174,7 @@ export function useGameController() {
         setProblem(practice ?? lessonProblem(LESSONS[idx]));
         setReviewCategory(null);
         setChosenIndex(null);
+        setTimedOut(false);
         return;
       }
       setGenerating(true);
@@ -175,6 +186,7 @@ export function useGameController() {
         setProblem(reviewProblem ?? generateClearProblem(range));
         setReviewCategory(reviewProblem ? category : null);
         setChosenIndex(null);
+        setTimedOut(false);
         setGenerating(false);
       }, 0);
     },
@@ -190,6 +202,7 @@ export function useGameController() {
     setDifficulty(d);
     setMode(m);
     if (saved) setScore(saved.score);
+    if (saved?.timeLimit && TIME_LIMITS.includes(saved.timeLimit)) setTimeLimit(saved.timeLimit);
     if (m === "lessons") {
       const idx = Math.max(LESSONS.findIndex((l) => l.id === saved?.lessonId), 0);
       const step = Math.min(Math.max(saved?.lessonStep ?? 0, 0), LESSON_STEPS - 1);
@@ -232,10 +245,27 @@ export function useGameController() {
       lessonStep,
       problem: mode === "lessons" && lessonStep === 0 ? null : problem,
       reviewCategory,
-      answered: chosenIndex !== null,
+      answered: chosenIndex !== null || timedOut,
       score,
+      timeLimit,
     });
-  }, [restored, mode, difficulty, lessonIndex, lessonStep, problem, reviewCategory, chosenIndex, score]);
+  }, [restored, mode, difficulty, lessonIndex, lessonStep, problem, reviewCategory, chosenIndex, timedOut, score, timeLimit]);
+
+  // Timed mode: start the clock for each new hand; running out counts as a miss.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDeadline(mode === "timed" && problem ? Date.now() + timeLimit * 1000 : null);
+  }, [mode, problem, timeLimit]);
+
+  useEffect(() => {
+    if (deadline === null || chosenIndex !== null || timedOut) return;
+    const id = setTimeout(() => {
+      setTimedOut(true);
+      setDeadline(null);
+      setScore((s) => ({ correct: s.correct, total: s.total + 1, streak: 0 }));
+    }, Math.max(0, deadline - Date.now()));
+    return () => clearTimeout(id);
+  }, [deadline, chosenIndex, timedOut]);
 
   const evaluation: HandEvaluation | null = useMemo(() => (problem ? evaluateHand(problemTiles(problem)) : null), [problem]);
   const category = useMemo(() => (problem && evaluation ? problemCategory(problem, evaluation) : null), [problem, evaluation]);
@@ -243,14 +273,18 @@ export function useGameController() {
   const tiles = problem ? problemTiles(problem) : [];
   const chosen = evaluation && chosenIndex !== null ? findOption(evaluation, tiles[chosenIndex]) : null;
   const correct = chosen && evaluation ? isSameValue(chosen, evaluation.options[0]) : null;
-  const explanation = useMemo(
-    () => (problem && evaluation && chosenIndex !== null ? explain(problem, evaluation, problemTiles(problem)[chosenIndex]) : null),
-    [problem, evaluation, chosenIndex],
-  );
+  const explanation = useMemo(() => {
+    if (!problem || !evaluation) return null;
+    if (chosenIndex !== null) return explain(problem, evaluation, problemTiles(problem)[chosenIndex]);
+    // Out of time: explain the optimal discard.
+    if (timedOut) return explain(problem, evaluation, representativeDiscard(problem, evaluation));
+    return null;
+  }, [problem, evaluation, chosenIndex, timedOut]);
   const lesson = mode === "lessons" ? LESSONS[lessonIndex] : null;
 
   const discard = (index: number) => {
-    if (!problem || !evaluation || !category || chosenIndex !== null || generating) return;
+    if (!problem || !evaluation || !category || chosenIndex !== null || timedOut || generating) return;
+    setDeadline(null);
     const option = findOption(evaluation, tiles[index]);
     const best = evaluation.options[0];
     const ok = isSameValue(option, best);
@@ -319,6 +353,10 @@ export function useGameController() {
     generating,
     chosenIndex,
     chosen,
+    timedOut,
+    deadline,
+    timeLimit,
+    changeTimeLimit: (seconds: number) => setTimeLimit(seconds),
     correct,
     score,
     stats,

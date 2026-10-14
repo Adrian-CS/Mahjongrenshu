@@ -10,11 +10,13 @@ interface HandRowProps {
   onDiscard: (index: number) => void;
   /** Keep tiles clickable after a discard is chosen (hand analysis). */
   allowReselect?: boolean;
+  /** Show the answer without a chosen tile (ran out of time). */
+  revealed?: boolean;
 }
 
 /** The player's 13 sorted tiles plus the drawn tile, set slightly apart. */
-export function HandRow({ hand, draw, chosenIndex, bestDiscards, onDiscard, allowReselect = false }: HandRowProps) {
-  const answered = chosenIndex !== null;
+export function HandRow({ hand, draw, chosenIndex, bestDiscards, onDiscard, allowReselect = false, revealed = false }: HandRowProps) {
+  const answered = chosenIndex !== null || revealed;
   const stateFor = (tile: Tile, index: number): TileState => {
     if (!answered) return "idle";
     const isBest = bestDiscards.includes(tile);

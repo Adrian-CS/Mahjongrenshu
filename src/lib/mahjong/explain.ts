@@ -141,7 +141,7 @@ export function explain(problem: Problem, evaluation: HandEvaluation, chosenTile
     );
     if (beaten.length > 0 && chosen.improvement) {
       points.push(
-        `${list(beaten.map((o) => o.discard))} también aceptaba${beaten.length > 1 ? "n" : ""} ${chosen.ukeire.total} tiles, pero tu descarte deja más tiles de mejora (${chosen.improvement.total} frente a ${Math.max(...beaten.map((o) => o.improvement!.total))}): robándolos, la mano pasa a una forma que acepta más.`,
+        `${list(beaten.map((o) => o.discard))} también aceptaba${beaten.length > 1 ? "n" : ""} ${chosen.ukeire.total} tiles, pero cortando ${cho} quedan más tiles de mejora (${chosen.improvement.total} frente a ${Math.max(...beaten.map((o) => o.improvement!.total))}): robándolos, la mano pasa a una forma que acepta más.`,
       );
     }
   }
