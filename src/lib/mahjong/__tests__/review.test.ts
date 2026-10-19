@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "../generator";
 import { evaluateHand } from "../evaluator";
-import { CategoryStats, generateClearProblem, generateProblemOfCategory, hasClearAnswer, pickReviewCategory, problemCategory, problemTiles, weakness } from "../review";
+import { CATEGORY_MIX, CategoryStats, generateBalancedProblem, generateClearProblem, pickCategory, generateProblemOfCategory, hasClearAnswer, pickReviewCategory, problemCategory, problemTiles, weakness } from "../review";
 import { parseHand, tileToString } from "../tiles";
 
 describe("review", () => {
@@ -59,5 +59,29 @@ describe("review", () => {
       const p = generateClearProblem({ rng, minShanten: 1, maxShanten: 2 });
       expect(hasClearAnswer(evaluateHand(problemTiles(p)))).toBe(true);
     }
+  });
+
+  it("picks problem types following the mix", () => {
+    const rng = seededRng(21);
+    const freq: Record<string, number> = {};
+    for (let i = 0; i < 5000; i++) {
+      const c = pickCategory(rng);
+      freq[c] = (freq[c] ?? 0) + 1;
+    }
+    const total = Object.values(freq).reduce((a, b) => a + b, 0);
+    const weights = Object.values(CATEGORY_MIX).reduce((a, b) => a + b, 0);
+    for (const [c, w] of Object.entries(CATEGORY_MIX)) expect(Math.abs((freq[c] ?? 0) / total - w / weights)).toBeLessThan(0.03);
+  });
+
+  it("balanced problems are not dominated by the isolated honor", { timeout: 120_000 }, () => {
+    const rng = seededRng(8);
+    let honor = 0;
+    const N = 60;
+    for (let i = 0; i < N; i++) {
+      const p = generateBalancedProblem({ rng, minShanten: 1, maxShanten: 2 });
+      expect(hasClearAnswer(evaluateHand(problemTiles(p)))).toBe(true);
+      if (problemCategory(p) === "isolated-honor") honor++;
+    }
+    expect(honor / N).toBeLessThan(0.3);
   });
 });

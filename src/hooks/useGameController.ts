@@ -16,6 +16,7 @@ import {
 } from "@/lib/api";
 import { LESSONS, lessonProblem } from "@/lib/lessons";
 import { generatePracticeProblem } from "@/lib/lessonPractice";
+import { ProblemSource } from "@/lib/problemSource";
 import {
   CategoryStats,
   HandEvaluation,
@@ -26,8 +27,6 @@ import {
   explain,
   findOption,
   formatHand,
-  generateClearProblem,
-  generateProblemOfCategory,
   isSameValue,
   pickReviewCategory,
   problemCategory,
@@ -158,6 +157,10 @@ export function useGameController() {
   /** Category being reviewed for the current problem (review mode only). */
   const [reviewCategory, setReviewCategory] = useState<Shape | null>(null);
   const [generating, setGenerating] = useState(false);
+  const sourceRef = useRef<ProblemSource | null>(null);
+  const requestToken = useRef(0);
+  const prefetchRef = useRef<{ key: string; promise: Promise<Problem | null> } | null>(null);
+  useEffect(() => () => sourceRef.current?.dispose(), []);
   const [timeLimit, setTimeLimit] = useState(TIME_LIMITS[1]);
   /** Timed mode: when the current hand runs out of time (ms epoch), or null. */
   const [deadline, setDeadline] = useState<number | null>(null);
@@ -188,6 +191,7 @@ export function useGameController() {
 
   const nextProblem = useCallback(
     (d: Difficulty = difficulty, m: Mode = mode, lesson?: number, step = 0) => {
+      requestToken.current++; // any pending generated hand is now stale
       // Hand analysis has its own view and state (AnalyzeView).
       if (m === "analyze") {
         setProblem(null);
@@ -233,17 +237,32 @@ export function useGameController() {
         return;
       }
       setGenerating(true);
-      // Defer so the "generating" state paints; rare review categories can take a moment.
-      setTimeout(() => {
-        const range = { minShanten: d.minShanten, maxShanten: d.maxShanten };
-        const category = m === "review" ? pickReviewCategory(statsRef.current.categories) : null;
-        const reviewProblem = category ? generateProblemOfCategory(category, range) : null;
-        setProblem(reviewProblem ?? generateClearProblem(range));
-        setReviewCategory(reviewProblem ? category : null);
+      // Generation runs in a web worker; the next hand is usually prefetched already.
+      const source = (sourceRef.current ??= new ProblemSource());
+      const token = ++requestToken.current;
+      const range = { minShanten: d.minShanten, maxShanten: d.maxShanten };
+      const prefetchKey = `${m}:${d.id}`;
+      let result: Promise<{ problem: Problem | null; category: Shape | null }>;
+      if (m === "review") {
+        const category = pickReviewCategory(statsRef.current.categories);
+        result = (category ? source.request({ kind: "category", category, ...range }) : Promise.resolve(null)).then(async (p) =>
+          p ? { problem: p, category } : { problem: await source.request({ kind: "balanced", ...range }), category: null },
+        );
+      } else {
+        const prefetched = prefetchRef.current?.key === prefetchKey ? prefetchRef.current.promise : null;
+        result = (prefetched ?? source.request({ kind: "balanced", ...range })).then((problem) => ({ problem, category: null }));
+      }
+      prefetchRef.current = null;
+      result.then(({ problem: next, category }) => {
+        if (token !== requestToken.current) return; // superseded by a newer request
+        setProblem(next);
+        setReviewCategory(category);
         setChosenIndex(null);
         setTimedOut(false);
         setGenerating(false);
-      }, 0);
+        // Prepare the following hand while this one is being played.
+        if (m !== "review") prefetchRef.current = { key: prefetchKey, promise: source.request({ kind: "balanced", ...range }) };
+      });
     },
     [difficulty, mode, lessonIndex],
   );

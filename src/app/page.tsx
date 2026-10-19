@@ -133,6 +133,7 @@ export default function Home() {
               draw={problem.draw}
               chosenIndex={game.chosenIndex}
               revealed={game.timedOut}
+              busy={game.generating}
               bestDiscards={evaluation.bestDiscards}
               onDiscard={game.discard}
             />

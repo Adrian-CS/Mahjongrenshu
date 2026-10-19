@@ -80,6 +80,13 @@ Build command `npm run build`, output directory `out` (o
   lee la mano tras el descarte óptimo (secuencias, parejas, esperas, sueltos),
   qué tiles pierdes con tu descarte, el recuento de bloques cuando sobra uno y
   el principio de eficiencia que aplica. Todo sale del motor.
+- **Mezcla equilibrada de tipos:** en manos al azar, "corta el honor
+  aislado" es la respuesta en más de la mitad de los problemas. El modo normal
+  (y el contrarreloj) elige primero el tipo de problema según `CATEGORY_MIX`
+  (`review.ts`) y luego genera una mano de ese tipo. Se genera en un web worker
+  (`src/workers/problems.worker.ts`) y el siguiente problema se prepara
+  mientras juegas el actual. Por eso el build usa webpack (`next build
+  --webpack`): Turbopack no empaqueta el worker.
 - **Respuesta clara:** los problemas generados (normal y repaso) solo se
   aceptan si el descarte óptimo es único o si los empatados salen del mismo
   bloque (1s/2s de un penchan). Ver `hasClearAnswer` en `review.ts`.

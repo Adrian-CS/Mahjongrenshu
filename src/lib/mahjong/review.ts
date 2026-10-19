@@ -84,10 +84,10 @@ export function pickReviewCategory(stats: CategoryStats[], rng: Rng = Math.rando
  */
 export function generateProblemOfCategory(
   category: Shape,
-  options: Omit<GeneratorOptions, "accept" | "maxAttempts"> & { maxAttempts?: number } = {},
+  options: Omit<GeneratorOptions, "accept" | "maxAttempts"> & { maxAttempts?: number; budgetMs?: number } = {},
 ): Problem | null {
   // Rare categories can take long to find: give up after a time budget.
-  const deadline = Date.now() + 1000;
+  const deadline = Date.now() + (options.budgetMs ?? 1000);
   try {
     return generateProblem({
       maxAttempts: 3000,
@@ -98,6 +98,8 @@ export function generateProblemOfCategory(
         // a subset of these, so the category must already be among their shapes.
         const tiles = problemTiles(p);
         const counts = toCounts(tiles);
+        // Cheapest check first: some tile must have that shape at all.
+        if (!tiles.some((t) => classifyTile(t, counts) === category)) return false;
         const quick = evaluateHand(tiles, { tiebreak: false });
         if (!quick.bestDiscards.some((t) => classifyTile(t, counts) === category)) return false;
         const ev = evaluateHand(tiles);
@@ -107,4 +109,49 @@ export function generateProblemOfCategory(
   } catch {
     return null;
   }
+}
+
+/**
+ * Target mix of problem types for normal play. Random hands are dominated by
+ * "cut the isolated honor" (a third of them), so instead the type is picked
+ * first and a hand of that type is generated. Rare, slow-to-find types get
+ * less weight.
+ */
+export const CATEGORY_MIX: Record<Shape, number> = {
+  "isolated-honor": 12,
+  "isolated-terminal": 14,
+  "isolated-simple": 16,
+  kanchan: 16,
+  penchan: 12,
+  sequence: 12,
+  triplet: 8,
+  ryanmen: 5,
+  pair: 5,
+};
+
+export function pickCategory(rng: Rng = Math.random, mix: Record<Shape, number> = CATEGORY_MIX): Shape {
+  const entries = Object.entries(mix) as [Shape, number][];
+  let r = rng() * entries.reduce((sum, [, w]) => sum + w, 0);
+  for (const [category, w] of entries) {
+    r -= w;
+    if (r <= 0) return category;
+  }
+  return entries[entries.length - 1][0];
+}
+
+/**
+ * A clear-answer problem whose type follows CATEGORY_MIX. If the chosen type
+ * isn't found within the time budget, falls back to any clear problem.
+ */
+export function generateBalancedProblem(options: GeneratorOptions & { budgetMs?: number } = {}): Problem {
+  const { rng = Math.random, budgetMs = 600, ...rest } = options;
+  const category = pickCategory(rng);
+  const problem = generateProblemOfCategory(category, { ...rest, rng, budgetMs });
+  if (problem) return problem;
+  // Fallback: any clear problem, but not the over-represented isolated honor.
+  return generateClearProblem({
+    ...rest,
+    rng,
+    accept: (p) => category === "isolated-honor" || problemCategory(p) !== "isolated-honor",
+  });
 }
