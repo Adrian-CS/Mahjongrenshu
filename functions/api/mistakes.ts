@@ -1,13 +1,14 @@
 import { Env, json, userId } from "../_lib";
 
-/** GET /api/mistakes — hands answered wrong and not yet mastered, most recent first. */
+/** GET /api/mistakes — hands answered wrong and not yet mastered, oldest first so they are
+ * not answered from recent memory (a hand missed again moves to the back). */
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const { results } = await env.DB.prepare(
     `SELECT hand, draw, COUNT(*) AS misses, MAX(id) AS last_id
      FROM attempts
      WHERE user_id = ? AND was_correct = 0 AND mastered = 0
      GROUP BY hand, draw
-     ORDER BY last_id DESC
+     ORDER BY last_id ASC
      LIMIT 100`,
   )
     .bind(userId(request))
